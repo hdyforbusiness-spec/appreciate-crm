@@ -1,0 +1,63 @@
+import { prisma } from '../../utils/prisma'
+import { generateReservationId, calculateTotal } from '../../utils/helpers'
+import { validateBooking } from '../../utils/validators'
+import { requireAuth } from '../../utils/auth'
+
+export default defineEventHandler(async (event) => {
+  requireAuth(event)
+  
+  const body = await readBody(event)
+  
+  // Validasyon
+  const errors = validateBooking(body)
+  if (errors.length > 0) {
+    throw createError({
+      statusCode: 400,
+      statusMessage: 'Validasyon hatası',
+      data: errors
+    })
+  }
+
+  try {
+    // Rezervasyon ID'si üret
+    let reservationId: string
+    let isUnique = false
+    
+    do {
+      reservationId = generateReservationId()
+      const existing = await prisma.booking.findUnique({
+        where: { reservationId }
+      })
+      isUnique = !existing
+    } while (!isUnique)
+
+    // Toplam tutarı hesapla
+    const toplamTutar = calculateTotal(body.kacKisi, body.turFiyati)
+
+    const booking = await prisma.booking.create({
+      data: {
+        reservationId,
+        adSoyad: body.adSoyad.trim(),
+        telefon: body.telefon.trim(),
+        kacKisi: body.kacKisi,
+        turTarihi: new Date(body.turTarihi),
+        turAdi: body.turAdi.trim(),
+        turFiyati: body.turFiyati,
+        toplamTutar,
+        not: body.not?.trim() || null
+      }
+    })
+
+    return {
+      success: true,
+      booking,
+      message: 'Rezervasyon oluşturuldu'
+    }
+  } catch (error) {
+    console.error('Rezervasyon oluşturma hatası:', error)
+    throw createError({
+      statusCode: 500,
+      statusMessage: 'Rezervasyon oluşturulamadı'
+    })
+  }
+})

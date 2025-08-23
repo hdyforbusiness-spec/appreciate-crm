@@ -1,0 +1,30 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Booking {
+  id              String    @id @default(cuid())
+  reservationId   String    @unique // Otomatik üretilen rezervasyon numarası
+  adSoyad         String    // Ad Soyad
+  telefon         String    // Telefon numarası
+  kacKisi         Int       // Kaç kişi
+  turTarihi       DateTime  // Tur tarihi
+  turAdi          String    // Tur adı
+  turFiyati       Decimal   // Kişi başı tur fiyatı
+  toplamTutar     Decimal   // Toplam tutar (kacKisi * turFiyati)
+  not             String?   // Opsiyonel not
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  deletedAt       DateTime? // Soft delete
+  isDeleted       Boolean   @default(false)
+
+  @@map("bookings")
+}
