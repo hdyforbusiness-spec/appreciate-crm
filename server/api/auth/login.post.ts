@@ -10,7 +10,7 @@ export default defineEventHandler(async (event) => {
   }
 
   // Hardcoded password for Cloudflare Pages (no process.env)
-  const adminPassword = 'admin123'
+  const adminPassword = 'Hadycrm123!'
   
   if (password !== adminPassword) {
     throw createError({

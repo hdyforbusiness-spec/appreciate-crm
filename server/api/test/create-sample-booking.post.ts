@@ -1,7 +1,9 @@
-import { prisma } from '../../utils/prisma'
+import { getPrisma } from '../../utils/prisma'
 import { generateReservationId, calculateTotal } from '../../utils/helpers'
 
 export default defineEventHandler(async (event) => {
+  const prisma = getPrisma(event)
+  
   try {
     // Create a sample booking for testing
     const reservationId = generateReservationId()
