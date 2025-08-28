@@ -11,9 +11,6 @@ export default defineNuxtConfig({
     experimental: {
       wasm: true
     }
-  },
-  runtimeConfig: {
-    // Environment variables for D1
-    databaseUrl: process.env.DATABASE_URL,
   }
+  // Removed runtimeConfig with process.env
 })
