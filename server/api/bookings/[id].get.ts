@@ -1,8 +1,9 @@
-import { prisma } from '../../utils/prisma'
+import { getPrisma } from '../../utils/prisma'
 import { requireAuth } from '../../utils/auth'
 
 export default defineEventHandler(async (event) => {
   requireAuth(event)
+  const prisma = getPrisma(event)
   
   const id = getRouterParam(event, 'id')
   

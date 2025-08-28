@@ -1,10 +1,11 @@
-import { prisma } from '../../utils/prisma'
+import { getPrisma } from '../../utils/prisma'
 import { generateReservationId, calculateTotal } from '../../utils/helpers'
 import { validateBooking } from '../../utils/validators'
 import { requireAuth } from '../../utils/auth'
 
 export default defineEventHandler(async (event) => {
   requireAuth(event)
+  const prisma = getPrisma(event)
   
   const body = await readBody(event)
   
