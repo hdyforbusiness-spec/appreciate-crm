@@ -7,8 +7,14 @@ export default defineNuxtConfig({
   ],
   pages: true,
   nitro: {
+    preset: 'cloudflare-pages',
     experimental: {
       wasm: true
-    }
+    },
+    external: ['canvas']
+  },
+  runtimeConfig: {
+    // Environment variables for D1
+    databaseUrl: process.env.DATABASE_URL,
   }
 })

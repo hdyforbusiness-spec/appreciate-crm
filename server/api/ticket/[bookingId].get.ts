@@ -1,45 +1,21 @@
-import { PDFDocument, rgb, StandardFonts } from 'pdf-lib'
-import QRCode from 'qrcode'
 import { prisma } from '../../utils/prisma'
 import { requireAuth } from '../../utils/auth'
-import { formatDateTR, formatCurrency, formatPhone } from '../../utils/helpers'
+import { formatDateTR, formatCurrency, formatPhoneForTicket } from '../../utils/helpers'
 
-// Function to replace Turkish characters and symbols with ASCII equivalents for PDF compatibility
-function sanitizeTextForPDF(text: string): string {
-  if (!text) return text
-  
-  const charMap: { [key: string]: string } = {
-    // Turkish characters
-    'ç': 'c', 'Ç': 'C',
-    'ğ': 'g', 'Ğ': 'G', 
-    'ı': 'i', 'I': 'I',
-    'İ': 'I', 'i': 'i',
-    'ö': 'o', 'Ö': 'O',
-    'ş': 's', 'Ş': 'S',
-    'ü': 'u', 'Ü': 'U',
-    // Currency symbols
-    '₺': 'TL',  // Turkish Lira
-    '€': 'EUR', // Euro
-    '$': 'USD', // Dollar
-    '£': 'GBP', // Pound
-    // Other special characters
-    '\u2019': "'",   // Right single quotation mark
-    '\u2018': "'",   // Left single quotation mark
-    '\u201C': '"',   // Left double quotation mark
-    '\u201D': '"',   // Right double quotation mark
-    '\u2013': '-',   // En dash
-    '\u2014': '-',   // Em dash
-  }
-  
-  return text.replace(/[çÇğĞıIİiöÖşŞüÜ₺€$£\u2018\u2019\u201C\u201D\u2013\u2014]/g, (match) => charMap[match] || match)
-}
+// Import canvas directly - it works in development, will be excluded in Cloudflare build
+import { createCanvas, loadImage } from 'canvas'
+import { readFileSync } from 'fs'
+import { join } from 'path'
+
+// Check if we're in a Cloudflare Workers environment
+const isCloudflareWorkers = typeof globalThis.DB !== 'undefined' || process.env.CF_PAGES === '1'
 
 export default defineEventHandler(async (event) => {
   requireAuth(event)
   
   const bookingId = getRouterParam(event, 'bookingId')
   
-  console.log('PDF generation requested for booking ID:', bookingId)
+  console.log('JPG ticket generation requested for booking ID:', bookingId)
   
   if (!bookingId) {
     throw createError({
@@ -49,6 +25,14 @@ export default defineEventHandler(async (event) => {
   }
 
   try {
+    // Check if we're in a Cloudflare Workers environment
+    if (isCloudflareWorkers) {
+      throw createError({
+        statusCode: 501,
+        statusMessage: 'JPG bilet oluşturma Cloudflare Workers ortamında desteklenmiyor. Lütfen geliştirme ortamında deneyin.'
+      })
+    }
+
     // Get booking data
     const booking = await prisma.booking.findUnique({
       where: { id: bookingId, isDeleted: false }
@@ -61,249 +45,221 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // Create PDF document
-    const pdfDoc = await PDFDocument.create()
-    const page = pdfDoc.addPage([595.28, 841.89]) // A4 size
-    const { width, height } = page.getSize()
+    // Create canvas - A4 size at 300 DPI (2480 x 3508 pixels)
+    const width = 2480
+    const height = 3508
+    const canvas = createCanvas(width, height)
+    const ctx = canvas.getContext('2d')
 
-    // Load fonts
-    const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold)
-    const regularFont = await pdfDoc.embedFont(StandardFonts.Helvetica)
+    // Set background to white
+    ctx.fillStyle = '#ffffff'
+    ctx.fillRect(0, 0, width, height)
 
-    // Colors
-    const primaryColor = rgb(0.2, 0.4, 0.8) // Blue
-    const darkColor = rgb(0.2, 0.2, 0.2) // Dark gray
-    const lightColor = rgb(0.5, 0.5, 0.5) // Light gray
+    // Colors - different header color based on ticket type
+    const primaryColor = booking.biletTipi === 'Kendi Aracı ile Gelecek' 
+      ? '#CC3333' // Red for "Kendi Aracı ile Gelecek"
+      : '#3366CC' // Blue for "Servis Kullanacak" (default)
+    const darkColor = '#333333' // Dark gray
+    const lightColor = '#777777' // Light gray
 
-    // Header
-    page.drawRectangle({
-      x: 0,
-      y: height - 100,
-      width: width,
-      height: 100,
-      color: primaryColor,
-    })
+    // Header background
+    ctx.fillStyle = primaryColor
+    ctx.fillRect(0, 0, width, 400)
 
-    page.drawText('APPRECIATE TRAVEL', {
-      x: 50,
-      y: height - 40,
-      size: 24,
-      font: boldFont,
-      color: rgb(1, 1, 1),
-    })
+    // Header text
+    ctx.fillStyle = '#ffffff'
+    ctx.font = 'bold 120px Arial'
+    ctx.fillText('APPRECIATE TRAVEL', 200, 160)
 
-    page.drawText(sanitizeTextForPDF('TUR BİLETİ'), {
-      x: 50,
-      y: height - 70,
-      size: 16,
-      font: regularFont,
-      color: rgb(1, 1, 1),
-    })
+    ctx.font = '80px Arial'
+    ctx.fillText('TUR BİLETİ', 200, 280)
 
-    // Reservation ID (top right)
-    page.drawText(booking.reservationId, {
-      x: width - 200,
-      y: height - 50,
-      size: 18,
-      font: boldFont,
-      color: rgb(1, 1, 1),
-    })
+    // Reservation ID (top right) - smaller size
+    ctx.font = 'bold 60px Arial'
+    ctx.textAlign = 'right'
+    ctx.fillText(booking.reservationId, width - 200, 200)
+    ctx.textAlign = 'left' // Reset text alignment
 
     // Main content
-    let currentY = height - 150
+    let currentY = 600
 
     // Customer Information
-    page.drawText(sanitizeTextForPDF('MÜŞTERİ BİLGİLERİ'), {
-      x: 50,
-      y: currentY,
-      size: 14,
-      font: boldFont,
-      color: primaryColor,
-    })
+    ctx.fillStyle = primaryColor
+    ctx.font = 'bold 110px Arial'
+    ctx.fillText('MÜŞTERİ BİLGİLERİ', 200, currentY)
 
-    currentY -= 30
+    currentY += 160
 
-    page.drawText(sanitizeTextForPDF(`Ad Soyad: ${booking.adSoyad}`), {
-      x: 70,
-      y: currentY,
-      size: 12,
-      font: regularFont,
-      color: darkColor,
-    })
+    ctx.fillStyle = darkColor
+    ctx.font = '90px Arial'
+    ctx.fillText(`Ad Soyad: ${booking.adSoyad}`, 280, currentY)
 
-    currentY -= 20
+    currentY += 120
 
-    page.drawText(sanitizeTextForPDF(`Telefon: ${formatPhone(booking.telefon)}`), {
-      x: 70,
-      y: currentY,
-      size: 12,
-      font: regularFont,
-      color: darkColor,
-    })
+    ctx.fillText(`Telefon: ${formatPhoneForTicket(booking.telefon)}`, 280, currentY)
 
-    currentY -= 40
+    currentY += 200
 
     // Tour Information
-    page.drawText(sanitizeTextForPDF('TUR BİLGİLERİ'), {
-      x: 50,
-      y: currentY,
-      size: 14,
-      font: boldFont,
-      color: primaryColor,
-    })
+    ctx.fillStyle = primaryColor
+    ctx.font = 'bold 110px Arial'
+    ctx.fillText('TUR BİLGİLERİ', 200, currentY)
 
-    currentY -= 30
+    currentY += 160
 
-    page.drawText(sanitizeTextForPDF(`Tur Adı: ${booking.turAdi}`), {
-      x: 70,
-      y: currentY,
-      size: 12,
-      font: regularFont,
-      color: darkColor,
-    })
+    ctx.fillStyle = darkColor
+    ctx.font = '90px Arial'
+    ctx.fillText(`Tur Adı: ${booking.turAdi}`, 280, currentY)
 
-    currentY -= 20
+    currentY += 120
 
-    page.drawText(sanitizeTextForPDF(`Tarih: ${formatDateTR(booking.turTarihi)}`), {
-      x: 70,
-      y: currentY,
-      size: 12,
-      font: regularFont,
-      color: darkColor,
-    })
+    ctx.fillText(`Tarih: ${formatDateTR(booking.turTarihi)}`, 280, currentY)
 
-    currentY -= 20
+    currentY += 120
 
-    page.drawText(sanitizeTextForPDF(`Kişi Sayısı: ${booking.kacKisi}`), {
-      x: 70,
-      y: currentY,
-      size: 12,
-      font: regularFont,
-      color: darkColor,
-    })
+    ctx.fillText(`Kişi Sayısı: ${booking.kacKisi}`, 280, currentY)
 
-    currentY -= 20
+    currentY += 120
 
-    page.drawText(sanitizeTextForPDF(`Kişi Başı Fiyat: ${formatCurrency(booking.turFiyati)}`), {
-      x: 70,
-      y: currentY,
-      size: 12,
-      font: regularFont,
-      color: darkColor,
-    })
+    ctx.fillText(`Kişi Başı Fiyat: ${formatCurrency(Number(booking.turFiyati))}`, 280, currentY)
 
-    currentY -= 20
+    currentY += 120
 
-    page.drawText(sanitizeTextForPDF(`Toplam Tutar: ${formatCurrency(booking.toplamTutar)}`), {
-      x: 70,
-      y: currentY,
-      size: 14,
-      font: boldFont,
-      color: darkColor,
-    })
+    ctx.fillStyle = darkColor
+    ctx.font = 'bold 100px Arial'
+    ctx.fillText(`Toplam Tutar: ${formatCurrency(Number(booking.toplamTutar))}`, 280, currentY)
+
+    currentY += 200
+
+    // Ticket Type Information
+    ctx.fillStyle = primaryColor
+    ctx.font = 'bold 110px Arial'
+    ctx.fillText('BİLET TİPİ', 200, currentY)
+
+    currentY += 160
+
+    ctx.fillStyle = darkColor
+    ctx.font = '90px Arial'
+    ctx.fillText(`Tip: ${booking.biletTipi}`, 280, currentY)
+
+    // Pickup Information (only for "Servis Kullanacak")
+    if (booking.biletTipi === 'Servis Kullanacak' && (booking.alinisYeri || booking.alinisSaati)) {
+      currentY += 140
+      
+      ctx.fillStyle = primaryColor
+      ctx.font = 'bold 110px Arial'
+      ctx.fillText('ALIŞ BİLGİLERİ', 200, currentY)
+
+      if (booking.alinisYeri) {
+        currentY += 160
+        ctx.fillStyle = darkColor
+        ctx.font = '90px Arial'
+        ctx.fillText(`Alınış Yeri: ${booking.alinisYeri}`, 280, currentY)
+      }
+
+      if (booking.alinisSaati) {
+        currentY += 120
+        ctx.fillText(`Alınış Saati: ${booking.alinisSaati}`, 280, currentY)
+      }
+    }
 
     // Notes (if any)
     if (booking.not) {
-      currentY -= 40
+      currentY += 200
 
-      page.drawText(sanitizeTextForPDF('NOTLAR'), {
-        x: 50,
-        y: currentY,
-        size: 14,
-        font: boldFont,
-        color: primaryColor,
-      })
+      ctx.fillStyle = primaryColor
+      ctx.font = 'bold 90px Arial'
+      ctx.fillText('NOTLAR', 200, currentY)
 
-      currentY -= 25
+      currentY += 160
 
-      page.drawText(sanitizeTextForPDF(booking.not), {
-        x: 70,
-        y: currentY,
-        size: 11,
-        font: regularFont,
-        color: darkColor,
-      })
-    }
-
-    // QR Code
-    try {
-      const qrCodeBuffer = await QRCode.toBuffer(booking.reservationId, {
-        width: 120,
-        margin: 1,
-        type: 'png'
-      })
+      ctx.fillStyle = darkColor
+      ctx.font = '85px Arial'
       
-      const qrCodeImage = await pdfDoc.embedPng(qrCodeBuffer)
-      const qrCodeDims = qrCodeImage.scale(0.8)
-
-      page.drawImage(qrCodeImage, {
-        x: width - 150,
-        y: currentY - 100,
-        width: qrCodeDims.width,
-        height: qrCodeDims.height,
-      })
-
-      page.drawText(sanitizeTextForPDF('QR Kod'), {
-        x: width - 130,
-        y: currentY - 120,
-        size: 10,
-        font: regularFont,
-        color: lightColor,
-      })
-    } catch (qrError) {
-      console.error('QR kod oluşturma hatası:', qrError)
-      // Add a simple text instead of QR code if there's an error
-      page.drawText(sanitizeTextForPDF(`ID: ${booking.reservationId}`), {
-        x: width - 180,
-        y: currentY - 80,
-        size: 12,
-        font: regularFont,
-        color: darkColor,
-      })
+      // Handle long notes by wrapping text
+      const maxWidth = width - 600
+      const words = booking.not.split(' ')
+      let line = ''
+      
+      for (let n = 0; n < words.length; n++) {
+        const testLine = line + words[n] + ' '
+        const metrics = ctx.measureText(testLine)
+        const testWidth = metrics.width
+        
+        if (testWidth > maxWidth && n > 0) {
+          ctx.fillText(line, 280, currentY)
+          line = words[n] + ' '
+          currentY += 80
+        } else {
+          line = testLine
+        }
+      }
+      ctx.fillText(line, 280, currentY)
     }
+
+
 
     // Footer
-    const footerY = 100
-    page.drawText(sanitizeTextForPDF('Bu bilet elektronik olarak oluşturulmuştur.'), {
-      x: 50,
-      y: footerY,
-      size: 10,
-      font: regularFont,
-      color: lightColor,
-    })
-
-    page.drawText(sanitizeTextForPDF(`Oluşturulma Tarihi: ${formatDateTR(new Date())}`), {
-      x: 50,
-      y: footerY - 15,
-      size: 10,
-      font: regularFont,
-      color: lightColor,
-    })
-
+    const footerY = height - 200
+    
     // Line separator
-    page.drawLine({
-      start: { x: 50, y: footerY + 20 },
-      end: { x: width - 50, y: footerY + 20 },
-      thickness: 0.5,
-      color: lightColor,
-    })
+    ctx.strokeStyle = lightColor
+    ctx.lineWidth = 2
+    ctx.beginPath()
+    ctx.moveTo(200, footerY - 100)
+    ctx.lineTo(width - 200, footerY - 100)
+    ctx.stroke()
 
-    // Generate PDF bytes
-    const pdfBytes = await pdfDoc.save()
+    ctx.fillStyle = lightColor
+    ctx.font = '50px Arial'
+    ctx.fillText('Bu bilet elektronik olarak oluşturulmuştur.', 200, footerY)
+
+    ctx.fillText(`Oluşturulma Tarihi: ${formatDateTR(new Date())}`, 200, footerY + 60)
+
+    // Add regulatory text
+    ctx.fillStyle = darkColor
+    ctx.font = '45px Arial'
+    ctx.fillText('İş Bu Bilet Yabancı Tur Operatörü Bölgesindeki Kontrol İçindir.', 200, footerY + 140)
+    ctx.fillText('Hiçbir Mali Hükmü Yoktur.', 200, footerY + 190)
+
+    // Add TURSAB logo to bottom right
+    try {
+      const logoPath = join(process.cwd(), 'public', 'tursab.png')
+      const logoBuffer = readFileSync(logoPath)
+      const logoImage = await loadImage(logoBuffer)
+      
+      // Calculate logo size (maintain aspect ratio, max height 120px)
+      const maxLogoHeight = 180
+      const logoAspectRatio = logoImage.width / logoImage.height
+      const logoHeight = Math.min(maxLogoHeight, logoImage.height)
+      const logoWidth = logoHeight * logoAspectRatio
+      
+      // Position logo in bottom right corner with some margin (adjusted for new text)
+      const logoX = width - logoWidth - 100
+      const logoY = footerY + 20
+      
+      ctx.drawImage(logoImage, logoX, logoY, logoWidth, logoHeight)
+    } catch (logoError) {
+      console.error('TURSAB logo yükleme hatası:', logoError)
+      // Continue without logo if there's an error
+    }
+
+    // Generate JPG buffer
+    const buffer = canvas.toBuffer('image/jpeg', { quality: 0.95 })
 
     // Set response headers
-    setHeader(event, 'Content-Type', 'application/pdf')
-    setHeader(event, 'Content-Disposition', `attachment; filename="bilet-${booking.reservationId}.pdf"`)
-    setHeader(event, 'Content-Length', pdfBytes.length.toString())
+    setHeader(event, 'Content-Type', 'image/jpeg')
+    setHeader(event, 'Content-Disposition', `attachment; filename="bilet-${booking.reservationId}.jpg"`)
+    setHeader(event, 'Content-Length', buffer.length)
 
-    // Return the PDF bytes directly
-    return pdfBytes
+    // Return the JPG buffer directly
+    return buffer
 
   } catch (error) {
-    console.error('PDF bilet oluşturma hatası:', error)
+    console.error('JPG bilet oluşturma hatası:', error)
     throw createError({
       statusCode: 500,
-      statusMessage: 'PDF bilet oluşturulamadı'
+      statusMessage: 'JPG bilet oluşturulamadı'
     })
   }
 })

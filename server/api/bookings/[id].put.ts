@@ -52,7 +52,10 @@ export default defineEventHandler(async (event) => {
         turAdi: body.turAdi.trim(),
         turFiyati: body.turFiyati,
         toplamTutar,
-        not: body.not?.trim() || null
+        not: body.not?.trim() || null,
+        biletTipi: body.biletTipi || 'Servis Kullanacak',
+        alinisYeri: body.biletTipi === 'Servis Kullanacak' ? body.alinisYeri?.trim() || null : null,
+        alinisSaati: body.biletTipi === 'Servis Kullanacak' ? body.alinisSaati?.trim() || null : null
       }
     })
 

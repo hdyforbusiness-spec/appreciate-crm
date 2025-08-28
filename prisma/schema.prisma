@@ -21,6 +21,9 @@ model Booking {
   turFiyati       Decimal   // Kişi başı tur fiyatı
   toplamTutar     Decimal   // Toplam tutar (kacKisi * turFiyati)
   not             String?   // Opsiyonel not
+  biletTipi       String    @default("Servis Kullanacak") // "Servis Kullanacak" veya "Kendi Aracı ile Gelecek"
+  alinisYeri      String?   // Alınış yeri (sadece "Kendi Aracı ile Gelecek" için)
+  alinisSaati     String?   // Alınış saati (HH:MM formatında, sadece "Servis Kullanacak" için)
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
   deletedAt       DateTime? // Soft delete

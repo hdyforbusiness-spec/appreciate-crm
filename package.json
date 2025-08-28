@@ -7,21 +7,27 @@
     "dev": "nuxt dev",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
-    "postinstall": "nuxt prepare"
+    "postinstall": "nuxt prepare",
+    "db:migrate": "wrangler d1 migrations apply appreciate-crm",
+    "db:migrate:local": "wrangler d1 migrations apply appreciate-crm --local",
+    "db:studio": "npx prisma studio",
+    "db:generate": "npx prisma generate",
+    "db:reset": "wrangler d1 execute appreciate-crm --command='DROP TABLE IF EXISTS bookings;'",
+    "deploy": "npm run build && wrangler pages deploy dist"
   },
   "dependencies": {
     "@headlessui/vue": "^1.7.23",
     "@heroicons/vue": "^2.2.0",
     "@nuxtjs/tailwindcss": "^6.14.0",
+    "@prisma/adapter-d1": "^6.15.0",
     "@prisma/client": "^6.14.0",
+    "canvas": "^3.2.0",
     "nuxt": "^4.0.3",
-    "pdf-lib": "^1.17.1",
     "prisma": "^6.14.0",
-    "qrcode": "^1.5.4",
     "vue": "^3.5.18",
     "vue-router": "^4.5.1"
   },
   "devDependencies": {
-    "@types/qrcode": "^1.5.5"
+    "wrangler": "^4.33.0"
   }
 }

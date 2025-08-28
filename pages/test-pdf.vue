@@ -1,7 +1,7 @@
 <template>
   <div class="min-h-screen bg-gray-50 p-8">
     <div class="max-w-2xl mx-auto">
-      <h1 class="text-2xl font-bold mb-6">PDF Test Sayfası</h1>
+      <h1 class="text-2xl font-bold mb-6">Bilet Test Sayfası</h1>
       
       <div class="bg-white p-6 rounded-lg shadow">
         <h2 class="text-lg font-semibold mb-4">Test Rezervasyonu Oluştur</h2>
@@ -18,9 +18,9 @@
           <p class="text-sm text-green-700">Rezervasyon No: {{ testBooking.reservationId }}</p>
           
           <button 
-            @click="downloadPDF(testBooking.id)"
+            @click="downloadTicket(testBooking.id)"
             class="mt-3 bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
-            PDF Bileti İndir
+            JPG Bileti İndir
           </button>
         </div>
 
@@ -58,7 +58,7 @@ const createTestBooking = async () => {
   }
 }
 
-const downloadPDF = (bookingId) => {
+const downloadTicket = (bookingId) => {
   window.open(`/api/ticket/${bookingId}`, '_blank')
 }
 </script>

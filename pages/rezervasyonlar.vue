@@ -293,18 +293,18 @@ const downloadTicket = async (bookingId) => {
     })
     
     // Create blob and download
-    const blob = new Blob([response], { type: 'application/pdf' })
+    const blob = new Blob([response], { type: 'image/jpeg' })
     const url = window.URL.createObjectURL(blob)
     const link = document.createElement('a')
     link.href = url
-    link.download = `bilet-${bookingId}.pdf`
+    link.download = `bilet-${bookingId}.jpg`
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
     window.URL.revokeObjectURL(url)
   } catch (error) {
-    console.error('PDF bilet indirme hatası:', error)
-    alert('PDF indirme sırasında bir hata oluştu.')
+    console.error('JPG bilet indirme hatası:', error)
+    alert('Bilet indirme sırasında bir hata oluştu.')
   }
 }
 

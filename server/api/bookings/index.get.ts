@@ -25,14 +25,14 @@ export default defineEventHandler(async (event) => {
 
   if (search) {
     where.OR = [
-      { adSoyad: { contains: search as string, mode: 'insensitive' } },
+      { adSoyad: { contains: search as string } },
       { telefon: { contains: search as string } },
-      { reservationId: { contains: search as string, mode: 'insensitive' } }
+      { reservationId: { contains: search as string } }
     ]
   }
 
   if (turAdi) {
-    where.turAdi = { contains: turAdi as string, mode: 'insensitive' }
+    where.turAdi = { contains: turAdi as string }
   }
 
   if (startDate || endDate) {

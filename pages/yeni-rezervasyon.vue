@@ -50,6 +50,39 @@
       <div class="bg-white shadow rounded-lg">
         <form @submit.prevent="submitForm">
           <div class="px-4 py-5 sm:p-6">
+            <!-- Bilet Tipi Seçimi -->
+            <div class="mb-6">
+              <fieldset>
+                <legend class="text-sm font-medium text-gray-700 mb-3">Bilet Tipi <span class="text-red-500">*</span></legend>
+                <div class="space-y-3">
+                  <div class="flex items-center">
+                    <input
+                      id="servis-kullanacak"
+                      v-model="form.biletTipi"
+                      type="radio"
+                      value="Servis Kullanacak"
+                      class="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300"
+                    />
+                    <label for="servis-kullanacak" class="ml-3 block text-sm font-medium text-gray-700">
+                      Servis Kullanacak
+                    </label>
+                  </div>
+                  <div class="flex items-center">
+                    <input
+                      id="kendi-araci"
+                      v-model="form.biletTipi"
+                      type="radio"
+                      value="Kendi Aracı ile Gelecek"
+                      class="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300"
+                    />
+                    <label for="kendi-araci" class="ml-3 block text-sm font-medium text-gray-700">
+                      Kendi Aracı ile Gelecek
+                    </label>
+                  </div>
+                </div>
+              </fieldset>
+            </div>
+
             <div class="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-2">
               
               <!-- Ad Soyad -->
@@ -185,6 +218,44 @@
                 </div>
               </div>
 
+              <!-- Alınış Yeri (Sadece Servis Kullanacak için) -->
+              <div v-if="form.biletTipi === 'Servis Kullanacak'">
+                <label for="alinisYeri" class="block text-sm font-medium text-gray-700">
+                  Alınış Yeri <span class="text-red-500">*</span>
+                </label>
+                <div class="mt-1">
+                  <input
+                    id="alinisYeri"
+                    v-model="form.alinisYeri"
+                    type="text"
+                    :required="form.biletTipi === 'Servis Kullanacak'"
+                    class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                    :class="{ 'border-red-300': errors.alinisYeri }"
+                    placeholder="Alınacak yer"
+                  />
+                  <p v-if="errors.alinisYeri" class="mt-2 text-sm text-red-600">{{ errors.alinisYeri }}</p>
+                </div>
+              </div>
+
+              <!-- Alınış Saati (Sadece Servis Kullanacak için) -->
+              <div v-if="form.biletTipi === 'Servis Kullanacak'">
+                <label for="alinisSaati" class="block text-sm font-medium text-gray-700">
+                  Alınış Saati <span class="text-red-500">*</span>
+                </label>
+                <div class="mt-1">
+                  <input
+                    id="alinisSaati"
+                    v-model="form.alinisSaati"
+                    type="time"
+                    :required="form.biletTipi === 'Servis Kullanacak'"
+                    class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                    :class="{ 'border-red-300': errors.alinisSaati }"
+                    placeholder="07:30"
+                  />
+                  <p v-if="errors.alinisSaati" class="mt-2 text-sm text-red-600">{{ errors.alinisSaati }}</p>
+                </div>
+              </div>
+
               <!-- Not -->
               <div class="sm:col-span-2">
                 <label for="not" class="block text-sm font-medium text-gray-700">
@@ -249,7 +320,10 @@ const form = ref({
   turAdi: '',
   turTarihi: '',
   turFiyati: 0,
-  not: ''
+  not: '',
+  biletTipi: 'Servis Kullanacak',
+  alinisYeri: '',
+  alinisSaati: ''
 })
 
 const errors = ref({})
@@ -305,13 +379,46 @@ const validateForm = () => {
     errors.value.turFiyati = 'Tur fiyatı 0\'dan büyük olmalıdır'
   }
   
+  // Servis Kullanacak için ek alanların validasyonu
+  if (form.value.biletTipi === 'Servis Kullanacak') {
+    if (!form.value.alinisYeri || form.value.alinisYeri.trim().length < 2) {
+      errors.value.alinisYeri = 'Alınış yeri en az 2 karakter olmalıdır'
+    }
+    
+    if (!form.value.alinisSaati || !isValidTime(form.value.alinisSaati)) {
+      errors.value.alinisSaati = 'Geçerli bir saat formatı giriniz (HH:MM)'
+    }
+  }
+  
   return Object.keys(errors.value).length === 0
 }
 
 const isValidPhone = (phone) => {
-  const phoneRegex = /^(0|90)?[5][0-9]{9}$/
   const cleaned = phone.replace(/\D/g, '')
-  return phoneRegex.test(cleaned)
+  
+  // Türkiye telefon numarası formatı (priority check)
+  const turkishRegex = /^(0|90)?[5][0-9]{9}$/
+  if (turkishRegex.test(cleaned)) {
+    return true
+  }
+  
+  // International phone number format (basic validation)
+  // Accepts: country code (1-4 digits) + phone number (6-14 digits)
+  // Total length: 7-15 digits (ITU-T E.164 standard)
+  if (cleaned.length >= 7 && cleaned.length <= 15) {
+    // Must start with a digit (not 0 for international)
+    if (cleaned.startsWith('0')) {
+      return false // Invalid international format
+    }
+    return true
+  }
+  
+  return false
+}
+
+const isValidTime = (time) => {
+  const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/
+  return timeRegex.test(time)
 }
 
 const submitForm = async () => {
@@ -351,7 +458,10 @@ const loadBooking = async (id) => {
       turAdi: booking.turAdi,
       turTarihi: new Date(booking.turTarihi).toISOString().split('T')[0],
       turFiyati: booking.turFiyati,
-      not: booking.not || ''
+      not: booking.not || '',
+      biletTipi: booking.biletTipi || 'Servis Kullanacak',
+      alinisYeri: booking.alinisYeri || '',
+      alinisSaati: booking.alinisSaati || ''
     }
   } catch (error) {
     console.error('Rezervasyon yüklenirken hata:', error)

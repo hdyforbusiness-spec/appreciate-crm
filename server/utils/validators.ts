@@ -47,14 +47,52 @@ export function validateBooking(data: Partial<CreateBookingData>): ValidationErr
     errors.push({ field: 'turFiyati', message: 'Tur fiyatı 0\'dan büyük olmalıdır' })
   }
 
+  // Bilet tipi kontrolü
+  if (!data.biletTipi || !['Servis Kullanacak', 'Kendi Aracı ile Gelecek'].includes(data.biletTipi)) {
+    errors.push({ field: 'biletTipi', message: 'Geçerli bir bilet tipi seçiniz' })
+  }
+
+  // Servis Kullanacak için ek alanların validasyonu
+  if (data.biletTipi === 'Servis Kullanacak') {
+    if (!data.alinisYeri || data.alinisYeri.trim().length < 2) {
+      errors.push({ field: 'alinisYeri', message: 'Alınış yeri en az 2 karakter olmalıdır' })
+    }
+    
+    if (!data.alinisSaati || !isValidTime(data.alinisSaati)) {
+      errors.push({ field: 'alinisSaati', message: 'Geçerli bir saat formatı giriniz (HH:MM)' })
+    }
+  }
+
   return errors
 }
 
 function isValidPhone(phone: string): boolean {
-  // Türkiye telefon numarası formatı
-  const phoneRegex = /^(0|90)?[5][0-9]{9}$/
   const cleaned = phone.replace(/\D/g, '')
-  return phoneRegex.test(cleaned)
+  
+  // Türkiye telefon numarası formatı (priority check)
+  const turkishRegex = /^(0|90)?[5][0-9]{9}$/
+  if (turkishRegex.test(cleaned)) {
+    return true
+  }
+  
+  // International phone number format (basic validation)
+  // Accepts: country code (1-4 digits) + phone number (6-14 digits)
+  // Total length: 7-15 digits (ITU-T E.164 standard)
+  if (cleaned.length >= 7 && cleaned.length <= 15) {
+    // Must start with a digit (not 0 for international)
+    if (cleaned.startsWith('0')) {
+      return false // Invalid international format
+    }
+    return true
+  }
+  
+  return false
+}
+
+function isValidTime(time: string): boolean {
+  // HH:MM formatı (00:00 - 23:59)
+  const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/
+  return timeRegex.test(time)
 }
 
 export function sanitizeInput(input: string): string {

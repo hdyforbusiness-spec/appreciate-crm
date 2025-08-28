@@ -9,6 +9,9 @@ export interface Booking {
   turFiyati: number
   toplamTutar: number
   not?: string
+  biletTipi: string
+  alinisYeri?: string
+  alinisSaati?: string
   createdAt: Date
   updatedAt: Date
   deletedAt?: Date
@@ -23,6 +26,9 @@ export interface CreateBookingData {
   turAdi: string
   turFiyati: number
   not?: string
+  biletTipi: string
+  alinisYeri?: string
+  alinisSaati?: string
 }
 
 export interface UpdateBookingData extends Partial<CreateBookingData> {

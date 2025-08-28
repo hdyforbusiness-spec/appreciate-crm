@@ -2,7 +2,7 @@
 
 ## 📋 Proje Özeti
 
-Appreciate Travel benzeri turlar için basit, tek kullanıcılı web tabanlı CRM sistemi. Müşteri kayıtlarını yönetme, arama/filtreleme, CSV dışa aktarma ve PDF bilet üretme özellikleri içerir.
+Appreciate Travel benzeri turlar için basit, tek kullanıcılı web tabanlı CRM sistemi. Müşteri kayıtlarını yönetme, arama/filtreleme, CSV dışa aktarma ve JPG bilet üretme özellikleri içerir.
 
 ## 🎯 Teknik Spesifikasyonlar
 
@@ -17,7 +17,7 @@ Appreciate Travel benzeri turlar için basit, tek kullanıcılı web tabanlı CR
 - **API:** Nuxt 3 Server API
 - **Veritabanı:** SQLite + Prisma ORM
 - **Dosya Yolu:** `./data/app.db`
-- **PDF Üretimi:** Server-side pdf-lib ile `/api/ticket/[bookingId]` endpoint
+- **JPG Bilet Üretimi:** Server-side canvas ile `/api/ticket/[bookingId]` endpoint
 
 ### Kimlik Doğrulama
 - **Tip:** Tek kullanıcı (admin)
@@ -73,8 +73,8 @@ model Booking {
 - ✅ Filtrelenmiş sonuçları dışa aktarma
 - ✅ Türkçe karakter desteği
 
-### 4. PDF Bilet Üretimi
-- ✅ Her rezervasyon için özel PDF bilet
+### 4. JPG Bilet Üretimi
+- ✅ Her rezervasyon için özel JPG bilet
 - ✅ Rezervasyon detayları (Ad, Telefon, Tur, Tarih, Tutar)
 - ✅ QR kod (rezervasyon ID ile)
 - ✅ Şirket logosu ve bilgileri
@@ -96,7 +96,7 @@ model Booking {
 ### Rezervasyonlar Sayfası
 - **Tablo görünümü:** Tüm rezervasyonlar
 - **Filtreleme paneli:** Tarih, tur, durum
-- **Aksiyon butonları:** Düzenle, Sil, PDF İndir
+- **Aksiyon butonları:** Düzenle, Sil, JPG İndir
 - **Toplu işlemler:** CSV dışa aktar
 
 ### Rezervasyon Formu
@@ -133,7 +133,7 @@ appreciate/
 │       ├── bookings/       # Rezervasyon API'leri
 │       ├── auth/           # Kimlik doğrulama
 │       ├── export/         # CSV dışa aktarma
-│       └── ticket/         # PDF bilet üretimi
+│       └── ticket/         # JPG bilet üretimi
 ├── prisma/
 │   ├── schema.prisma       # Veritabanı şeması
 │   └── migrations/         # Veritabanı migration'ları
@@ -145,7 +145,7 @@ appreciate/
 │   ├── useAuth.ts         # Kimlik doğrulama
 │   └── useFilters.ts      # Filtreleme mantığı
 ├── utils/
-│   ├── pdf-generator.ts   # PDF üretimi
+│   ├── ticket-generator.ts   # JPG bilet üretimi
 │   ├── backup.ts          # Yedekleme işlemleri
 │   └── validators.ts      # Form validasyonları
 └── types/
@@ -177,9 +177,9 @@ appreciate/
 2. Filtreleme komponenti
 3. URL state yönetimi
 
-### Faz 5: PDF ve Export (1 gün)
-1. PDF template tasarımı
-2. PDF generation API
+### Faz 5: JPG Bilet ve Export (1 gün)
+1. JPG template tasarımı
+2. JPG generation API
 3. CSV export işlevi
 
 ### Faz 6: UI/UX İyileştirmeleri (1 gün)
@@ -205,7 +205,7 @@ appreciate/
     "@nuxt/ui": "^2.11.0",
     "@prisma/client": "^5.7.0",
     "prisma": "^5.7.0",
-    "pdf-lib": "^1.17.1",
+    "canvas": "^2.11.2",
     "papaparse": "^5.4.1",
     "bcryptjs": "^2.4.3",
     "qrcode": "^1.5.3"

@@ -1,0 +1,15 @@
+name = "appreciate-crm"
+compatibility_date = "2024-07-15"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "appreciate-crm"
+database_id = "07c064a6-5884-4ea7-8ff8-9d152daff2fe"
+migrations_dir = "prisma/migrations"
+
+[env.production]
+[[env.production.d1_databases]]
+binding = "DB"
+database_name = "appreciate-crm"
+database_id = "07c064a6-5884-4ea7-8ff8-9d152daff2fe"
+migrations_dir = "prisma/migrations"
