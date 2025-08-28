@@ -2,11 +2,6 @@ import { prisma } from '../../utils/prisma'
 import { requireAuth } from '../../utils/auth'
 import { formatDateTR, formatCurrency, formatPhoneForTicket } from '../../utils/helpers'
 
-// Import canvas directly - it works in development, will be excluded in Cloudflare build
-import { createCanvas, loadImage } from 'canvas'
-import { readFileSync } from 'fs'
-import { join } from 'path'
-
 // Check if we're in a Cloudflare Workers environment
 const isCloudflareWorkers = typeof globalThis.DB !== 'undefined' || process.env.CF_PAGES === '1'
 
@@ -44,6 +39,11 @@ export default defineEventHandler(async (event) => {
         statusMessage: 'Rezervasyon bulunamadı'
       })
     }
+
+    // Dynamic import of canvas - only loads in development
+    const { createCanvas, loadImage } = await import('canvas')
+    const { readFileSync } = await import('fs')
+    const { join } = await import('path')
 
     // Create canvas - A4 size at 300 DPI (2480 x 3508 pixels)
     const width = 2480

@@ -11,7 +11,10 @@ export default defineNuxtConfig({
     experimental: {
       wasm: true
     },
-    external: ['canvas']
+    external: ['canvas'],
+    rollupConfig: {
+      external: ['canvas']
+    }
   },
   runtimeConfig: {
     // Environment variables for D1
