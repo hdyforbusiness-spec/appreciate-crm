@@ -12,7 +12,8 @@ export function requireAuth(event: H3Event<EventHandlerRequest>) {
 
   // Basit token doğrulama (production'da JWT kullanın)
   try {
-    const decoded = Buffer.from(token, 'base64').toString()
+    // Use atob instead of Buffer for Cloudflare Workers compatibility
+    const decoded = atob(token)
     const [user, timestamp] = decoded.split(':')
     
     if (user !== 'admin') {

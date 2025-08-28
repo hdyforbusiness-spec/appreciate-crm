@@ -9,7 +9,9 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  const adminPassword = process.env.ADMIN_PASSWORD
+  // For Cloudflare Workers, we'll use a hardcoded password or environment variable
+  // In production, you should set this in Cloudflare Pages environment variables
+  const adminPassword = process.env.ADMIN_PASSWORD || 'admin123'
   
   if (password !== adminPassword) {
     throw createError({
@@ -19,12 +21,14 @@ export default defineEventHandler(async (event) => {
   }
 
   // Basit JWT benzeri token (production'da gerçek JWT kullanın)
-  const token = Buffer.from(`admin:${Date.now()}`).toString('base64')
+  // Use btoa instead of Buffer for Cloudflare Workers compatibility
+  const token = btoa(`admin:${Date.now()}`)
   
   // HttpOnly cookie set et
+  // In Cloudflare Workers, secure should be true for HTTPS
   setCookie(event, 'auth-token', token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
+    secure: true, // Always secure in Cloudflare Workers
     sameSite: 'strict',
     maxAge: 60 * 60 * 24 * 7 // 7 gün
   })
