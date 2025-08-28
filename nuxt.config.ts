@@ -10,10 +10,6 @@ export default defineNuxtConfig({
     preset: 'cloudflare-pages',
     experimental: {
       wasm: true
-    },
-    external: ['canvas'],
-    rollupConfig: {
-      external: ['canvas']
     }
   },
   runtimeConfig: {

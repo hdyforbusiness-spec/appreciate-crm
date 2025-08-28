@@ -8,14 +8,14 @@ declare global {
 
 let prisma: PrismaClient
 
-if (process.env.NODE_ENV === 'production') {
+// Better environment detection for Cloudflare Workers
+if (globalThis.DB) {
   // In production (Cloudflare), use D1 adapter
-  if (globalThis.DB) {
-    const adapter = new PrismaD1(globalThis.DB)
-    prisma = new PrismaClient({ adapter })
-  } else {
-    throw new Error('D1 database binding not found. Make sure DB is properly configured in wrangler.toml')
-  }
+  const adapter = new PrismaD1(globalThis.DB)
+  prisma = new PrismaClient({ adapter })
+} else if (process.env.NODE_ENV === 'production') {
+  // Fallback check for production environment
+  throw new Error('D1 database binding not found. Make sure DB is properly configured in wrangler.toml')
 } else {
   // In development, use SQLite file
   prisma = globalThis.__prisma || new PrismaClient({
@@ -26,7 +26,7 @@ if (process.env.NODE_ENV === 'production') {
     }
   })
   
-  if (process.env.NODE_ENV !== 'production') {
+  if (!globalThis.__prisma) {
     globalThis.__prisma = prisma
   }
 }
