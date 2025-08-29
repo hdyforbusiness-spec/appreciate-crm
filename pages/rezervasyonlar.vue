@@ -287,24 +287,11 @@ const exportCSV = async () => {
 
 const downloadTicket = async (bookingId) => {
   try {
-    const response = await $fetch(`/api/ticket/${bookingId}`, {
-      method: 'GET',
-      responseType: 'arrayBuffer'
-    })
-    
-    // Create blob and download
-    const blob = new Blob([response], { type: 'image/jpeg' })
-    const url = window.URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = `bilet-${bookingId}.jpg`
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    window.URL.revokeObjectURL(url)
+    // Open ticket in new tab for printing/downloading
+    window.open(`/api/ticket/${bookingId}`, '_blank')
   } catch (error) {
-    console.error('JPG bilet indirme hatası:', error)
-    alert('Bilet indirme sırasında bir hata oluştu.')
+    console.error('Bilet açma hatası:', error)
+    alert('Bilet açılırken bir hata oluştu.')
   }
 }
 

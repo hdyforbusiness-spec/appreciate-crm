@@ -28,7 +28,7 @@ export default defineEventHandler(async (event) => {
     return {
       success: true,
       booking,
-      pdfUrl: `/api/ticket/${booking.id}`,
+      ticketUrl: `/api/ticket/${booking.id}`,
       message: 'Test rezervasyonu oluşturuldu'
     }
   } catch (error) {
