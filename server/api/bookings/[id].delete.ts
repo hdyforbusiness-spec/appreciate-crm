@@ -17,7 +17,7 @@ export default defineEventHandler(async (event) => {
   try {
     // Check if booking exists
     const existingBooking = await prisma.booking.findUnique({
-      where: { id: id, isDeleted: false }
+      where: { id: id }
     })
 
     if (!existingBooking) {
@@ -27,18 +27,14 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // Soft delete
-    const booking = await prisma.booking.update({
-      where: { id: id },
-      data: {
-        isDeleted: true,
-        deletedAt: new Date()
-      }
+    // Hard delete - physically remove from database
+    await prisma.booking.delete({
+      where: { id: id }
     })
 
     return {
       success: true,
-      message: 'Rezervasyon silindi'
+      message: 'Rezervasyon kalıcı olarak silindi'
     }
   } catch (error) {
     console.error('Rezervasyon silme hatası:', error)

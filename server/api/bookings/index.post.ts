@@ -33,7 +33,7 @@ export default defineEventHandler(async (event) => {
     } while (!isUnique)
 
     // Toplam tutarı hesapla
-    const toplamTutar = calculateTotal(body.kacKisi, body.turFiyati)
+    const toplamTutar = calculateTotal(body.kacKisi, body.turFiyati, body.cocukSayisi || 0)
 
     const booking = await prisma.booking.create({
       data: {
@@ -41,6 +41,7 @@ export default defineEventHandler(async (event) => {
         adSoyad: body.adSoyad.trim(),
         telefon: body.telefon.trim(),
         kacKisi: body.kacKisi,
+        cocukSayisi: body.cocukSayisi || 0,
         turTarihi: new Date(body.turTarihi),
         turAdi: body.turAdi.trim(),
         turFiyati: body.turFiyati,

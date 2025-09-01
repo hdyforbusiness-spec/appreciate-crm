@@ -23,6 +23,11 @@ export function validateBooking(data: Partial<CreateBookingData>): ValidationErr
     errors.push({ field: 'kacKisi', message: 'Kişi sayısı 1 ile 50 arasında olmalıdır' })
   }
 
+  // Çocuk sayısı kontrolü
+  if (data.cocukSayisi !== undefined && (data.cocukSayisi < 0 || !Number.isInteger(data.cocukSayisi))) {
+    errors.push({ field: 'cocukSayisi', message: 'Çocuk sayısı 0 veya daha büyük bir tam sayı olmalıdır' })
+  }
+
   // Tur adı kontrolü
   if (!data.turAdi || data.turAdi.trim().length < 2) {
     errors.push({ field: 'turAdi', message: 'Tur adı en az 2 karakter olmalıdır' })
@@ -97,4 +102,22 @@ function isValidTime(time: string): boolean {
 
 export function sanitizeInput(input: string): string {
   return input.trim().replace(/<[^>]*>/g, '') // Basit HTML temizleme
+}
+
+// Alias for backward compatibility
+export const validateBookingData = validateBooking
+
+// New function that returns the format expected by the PUT endpoint
+export function validateBookingDataStrict(data: Partial<CreateBookingData>): { success: boolean; error?: string } {
+  const errors = validateBooking(data)
+  
+  if (errors.length === 0) {
+    return { success: true }
+  }
+  
+  // Return the first error message
+  return { 
+    success: false, 
+    error: errors[0].message 
+  }
 }

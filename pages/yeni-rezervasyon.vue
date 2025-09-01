@@ -143,6 +143,23 @@
                 </div>
               </div>
 
+              <!-- Çocuk Sayısı -->
+              <div>
+                <label for="cocukSayisi" class="block text-sm font-medium text-gray-700">
+                  Çocuk Sayısı
+                </label>
+                <div class="mt-1">
+                  <input
+                    id="cocukSayisi"
+                    v-model.number="form.cocukSayisi"
+                    type="number"
+                    min="0"
+                    class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                    placeholder="0"
+                  />
+                </div>
+              </div>
+
               <!-- Tur Adı -->
               <div>
                 <label for="turAdi" class="block text-sm font-medium text-gray-700">
@@ -215,6 +232,10 @@
                     readonly
                     class="shadow-sm bg-gray-50 border-gray-300 block w-full sm:text-sm rounded-md cursor-not-allowed"
                   />
+                  <p class="mt-1 text-xs text-gray-500">
+                    {{ form.kacKisi || 0 }} yetişkin × {{ formatCurrency(form.turFiyati) }} + 
+                    {{ form.cocukSayisi || 0 }} çocuk × {{ formatCurrency((form.turFiyati || 0) * 0.5) }}
+                  </p>
                 </div>
               </div>
 
@@ -317,6 +338,7 @@ const form = ref({
   adSoyad: '',
   telefon: '',
   kacKisi: 1,
+  cocukSayisi: 0,
   turAdi: '',
   turTarihi: '',
   turFiyati: 0,
@@ -335,12 +357,21 @@ const minDate = computed(() => {
 })
 
 const toplamTutar = computed(() => {
-  const total = (form.value.kacKisi || 0) * (form.value.turFiyati || 0)
+  const adultPrice = form.value.turFiyati || 0
+  const kidPrice = adultPrice * 0.5 // Çocuk fiyatı tam fiyatın yarısı
+  const total = (form.value.kacKisi || 0) * adultPrice + (form.value.cocukSayisi || 0) * kidPrice
   return new Intl.NumberFormat('tr-TR', {
     style: 'currency',
     currency: 'TRY'
   }).format(total)
 })
+
+const formatCurrency = (amount) => {
+  return new Intl.NumberFormat('tr-TR', {
+    style: 'currency',
+    currency: 'TRY'
+  }).format(amount || 0)
+}
 
 // Methods
 const validateForm = () => {
@@ -455,6 +486,7 @@ const loadBooking = async (id) => {
       adSoyad: booking.adSoyad,
       telefon: booking.telefon,
       kacKisi: booking.kacKisi,
+      cocukSayisi: booking.cocukSayisi,
       turAdi: booking.turAdi,
       turTarihi: new Date(booking.turTarihi).toISOString().split('T')[0],
       turFiyati: booking.turFiyati,

@@ -14,8 +14,10 @@ export function generateReservationId(): string {
 /**
  * Toplam tutarı hesaplar
  */
-export function calculateTotal(kacKisi: number, turFiyati: number): number {
-  return kacKisi * turFiyati
+export function calculateTotal(kacKisi: number, turFiyati: number, cocukSayisi: number = 0): number {
+  const adultTotal = kacKisi * turFiyati
+  const kidTotal = cocukSayisi * (turFiyati * 0.5)
+  return adultTotal + kidTotal
 }
 
 /**

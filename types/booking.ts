@@ -4,7 +4,25 @@ export interface Booking {
   adSoyad: string
   telefon: string
   kacKisi: number
+  cocukSayisi: number
   turTarihi: Date
+  turAdi: string
+  turFiyati: number
+  toplamTutar: number
+  not?: string | null
+  biletTipi: string
+  alinisYeri?: string | null
+  alinisSaati?: string | null
+  createdAt: Date
+  updatedAt: Date
+}
+
+export interface CreateBookingRequest {
+  adSoyad: string
+  telefon: string
+  kacKisi: number
+  cocukSayisi?: number
+  turTarihi: string
   turAdi: string
   turFiyati: number
   toplamTutar: number
@@ -12,26 +30,9 @@ export interface Booking {
   biletTipi: string
   alinisYeri?: string
   alinisSaati?: string
-  createdAt: Date
-  updatedAt: Date
-  deletedAt?: Date
-  isDeleted: boolean
 }
 
-export interface CreateBookingData {
-  adSoyad: string
-  telefon: string
-  kacKisi: number
-  turTarihi: Date
-  turAdi: string
-  turFiyati: number
-  not?: string
-  biletTipi: string
-  alinisYeri?: string
-  alinisSaati?: string
-}
-
-export interface UpdateBookingData extends Partial<CreateBookingData> {
+export interface UpdateBookingRequest extends Partial<CreateBookingRequest> {
   id: string
 }
 

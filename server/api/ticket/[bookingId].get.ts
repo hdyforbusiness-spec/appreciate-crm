@@ -1,26 +1,25 @@
+import { defineEventHandler, getRouterParam, setHeader, createError } from 'h3'
 import { getPrisma } from '../../utils/prisma'
 import { requireAuth } from '../../utils/auth'
 import { formatDateTR, formatCurrency, formatPhoneForTicket } from '../../utils/helpers'
 
 export default defineEventHandler(async (event) => {
-  requireAuth(event)
-  const prisma = getPrisma(event)
-  
-  const bookingId = getRouterParam(event, 'bookingId')
-  
-  console.log('Ticket data requested for booking ID:', bookingId)
-  
-  if (!bookingId) {
-    throw createError({
-      statusCode: 400,
-      statusMessage: 'Rezervasyon ID gereklidir'
-    })
-  }
-
   try {
+    requireAuth(event)
+    const prisma = getPrisma(event)
+    
+    const bookingId = getRouterParam(event, 'bookingId')
+    
+    if (!bookingId) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'Rezervasyon ID gereklidir'
+      })
+    }
+
     // Get booking data
     const booking = await prisma.booking.findUnique({
-      where: { id: bookingId, isDeleted: false }
+      where: { id: bookingId }
     })
 
     if (!booking) {
@@ -30,14 +29,15 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // Generate HTML ticket
-    const htmlTicket = generateHTMLTicket({
+    // Prepare ticket data
+    const ticketData = {
       reservationId: booking.reservationId,
       adSoyad: booking.adSoyad,
       telefon: formatPhoneForTicket(booking.telefon),
       turAdi: booking.turAdi,
       turTarihi: formatDateTR(booking.turTarihi),
-      kacKisi: booking.kacKisi,
+      kacKisi: booking.kacKisi.toString(),
+      cocukSayisi: booking.cocukSayisi,
       turFiyati: formatCurrency(Number(booking.turFiyati)),
       toplamTutar: formatCurrency(Number(booking.toplamTutar)),
       biletTipi: booking.biletTipi,
@@ -45,59 +45,150 @@ export default defineEventHandler(async (event) => {
       alinisSaati: booking.alinisSaati,
       not: booking.not,
       createdAt: formatDateTR(booking.createdAt)
-    })
+    }
 
-    // For Cloudflare Workers environment, we'll use a different approach
-    // Since we can't use Puppeteer in Workers, we'll create a minimal HTML page
-    // that immediately converts to JPG and downloads without showing content
+    // Generate SVG
+    const svg = generateTicketSVG(ticketData)
+
+    // Return HTML that auto-converts and downloads PNG
+    const html = generateAutoDownloadHTML(svg, ticketData.reservationId)
     
-    const autoDownloadHTML = generateAutoDownloadHTML(htmlTicket, booking.reservationId)
-    
-    // Set HTML content type but this will auto-download JPG
-    setHeader(event, 'Content-Type', 'text/html; charset=utf-8')
-    setHeader(event, 'Content-Disposition', `attachment; filename="ticket-${booking.reservationId}.html"`)
-    
-    return autoDownloadHTML
+    setHeader(event, 'Content-Type', 'text/html')
+    setHeader(event, 'Cache-Control', 'no-store')
+    return html
 
   } catch (error) {
-    console.error('Ticket data retrieval error:', error)
+    console.error('Ticket generation error:', error)
+    
+    if (error instanceof Error) {
+      throw createError({
+        statusCode: 500,
+        statusMessage: `Bilet oluşturulamadı: ${error.message}`
+      })
+    }
+    
     throw createError({
       statusCode: 500,
-      statusMessage: 'Bilet bilgileri alınamadı'
+      statusMessage: 'Bilet oluşturulamadı'
     })
   }
 })
 
-function generateAutoDownloadHTML(htmlTicket: string, reservationId: string) {
+function generateTicketSVG(ticketData: any): string {
+  const width = 800
+  const height = 1400 // Increased height to accommodate new fields
+  
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="headerGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:${ticketData.biletTipi === 'Kendi Aracı ile Gelecek' ? '#dc2626' : '#2563eb'};stop-opacity:1" />
+      <stop offset="100%" style="stop-color:${ticketData.biletTipi === 'Kendi Aracı ile Gelecek' ? '#b91c1c' : '#1d4ed8'};stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="${width}" height="${height}" fill="#ffffff"/>
+  
+  <!-- Header -->
+  <rect x="32" y="32" width="${width-64}" height="160" rx="12" fill="url(#headerGradient)"/>
+  <text x="${width/2}" y="80" text-anchor="middle" fill="white" font-family="Arial, sans-serif" font-size="45" font-weight="bold">APPRECIATE TRAVEL</text>
+  <text x="${width/2}" y="110" text-anchor="middle" fill="white" font-family="Arial, sans-serif" font-size="34" font-weight="600">TUR BİLETİ</text>
+  <text x="${width/2}" y="140" text-anchor="middle" fill="white" font-family="Arial, sans-serif" font-size="25" font-weight="600">#${ticketData.reservationId}</text>
+  
+  <!-- Customer Info -->
+  <text x="64" y="240" fill="#1f2937" font-family="Arial, sans-serif" font-size="31" font-weight="700">MÜŞTERİ BİLGİLERİ</text>
+  <text x="64" y="270" fill="#6b7280" font-family="Arial, sans-serif" font-size="28">Ad Soyad: ${ticketData.adSoyad}</text>
+  <text x="64" y="300" fill="#6b7280" font-family="Arial, sans-serif" font-size="28">Telefon: ${ticketData.telefon}</text>
+  
+  <!-- Tour Info -->
+  <text x="64" y="360" fill="#1f2937" font-family="Arial, sans-serif" font-size="31" font-weight="700">TUR BİLGİLERİ</text>
+  <text x="64" y="390" fill="#6b7280" font-family="Arial, sans-serif" font-size="28">Tur Adı: ${ticketData.turAdi}</text>
+  <text x="64" y="420" fill="#6b7280" font-family="Arial, sans-serif" font-size="28">Tarih: ${ticketData.turTarihi}</text>
+  <text x="64" y="450" fill="#1f2937" font-family="Arial, sans-serif" font-size="28" font-weight="700">Kişi Sayısı: ${ticketData.kacKisi}</text>
+  ${ticketData.cocukSayisi > 0 ? `<text x="64" y="480" fill="#1f2937" font-family="Arial, sans-serif" font-size="28" font-weight="700">Çocuk Sayısı: ${ticketData.cocukSayisi}</text>` : ''}
+  <text x="64" y="${ticketData.cocukSayisi > 0 ? 510 : 480}" fill="#6b7280" font-family="Arial, sans-serif" font-size="28">Kişi Başı Fiyat: ${ticketData.turFiyati}</text>
+  
+  <!-- Total Amount -->
+  <rect x="64" y="${ticketData.cocukSayisi > 0 ? 520 : 500}" width="${width-128}" height="100" rx="8" fill="#f0fdf4" stroke="#22c55e" stroke-width="2"/>
+  <text x="${width/2}" y="${ticketData.cocukSayisi > 0 ? 550 : 530}" text-anchor="middle" fill="#166534" font-family="Arial, sans-serif" font-size="25" font-weight="700">TOPLAM TUTAR</text>
+  <text x="${width/2}" y="${ticketData.cocukSayisi > 0 ? 580 : 560}" text-anchor="middle" fill="#16a34a" font-family="Arial, sans-serif" font-size="29" font-weight="800">${ticketData.toplamTutar}</text>
+  
+  <!-- Ticket Type -->
+  <text x="64" y="${ticketData.cocukSayisi > 0 ? 660 : 640}" fill="#1f2937" font-family="Arial, sans-serif" font-size="31" font-weight="700">BİLET TİPİ</text>
+  <text x="64" y="${ticketData.cocukSayisi > 0 ? 690 : 670}" fill="#6b7280" font-family="Arial, sans-serif" font-size="28">Tip: ${ticketData.biletTipi}</text>
+  
+  <!-- Contact Info based on ticket type -->
+  ${ticketData.biletTipi === 'Kendi Aracı ile Gelecek' ? `
+  <text x="64" y="${ticketData.cocukSayisi > 0 ? 740 : 720}" fill="#1f2937" font-family="Arial, sans-serif" font-size="31" font-weight="700">İLETİŞİM BİLGİLERİ</text>
+  <text x="64" y="${ticketData.cocukSayisi > 0 ? 770 : 750}" fill="#6b7280" font-family="Arial, sans-serif" font-size="28">İletişim Numarası: +90 555 081 9869</text>
+  ` : ''}
+  
+  ${ticketData.biletTipi === 'Servis Kullanacak' ? `
+  <text x="64" y="${ticketData.cocukSayisi > 0 ? 740 : 720}" fill="#1f2937" font-family="Arial, sans-serif" font-size="31" font-weight="700">İLETİŞİM BİLGİLERİ</text>
+  <text x="64" y="${ticketData.cocukSayisi > 0 ? 770 : 750}" fill="#6b7280" font-family="Arial, sans-serif" font-size="28">İletişim Numarası: +90 507 881 7824</text>
+  ` : ''}
+  
+  <!-- Pickup Info (conditional) -->
+  ${ticketData.biletTipi === 'Servis Kullanacak' && (ticketData.alinisYeri || ticketData.alinisSaati) ? `
+  <text x="64" y="${ticketData.cocukSayisi > 0 ? 820 : 800}" fill="#1f2937" font-family="Arial, sans-serif" font-size="31" font-weight="700">ALIŞ BİLGİLERİ</text>
+  ${ticketData.alinisYeri ? `<text x="64" y="${ticketData.cocukSayisi > 0 ? 850 : 830}" fill="#6b7280" font-family="Arial, sans-serif" font-size="28">Alınış Yeri: ${ticketData.alinisYeri}</text>` : ''}
+  ${ticketData.alinisSaati ? `<text x="64" y="${ticketData.cocukSayisi > 0 ? 880 : 860}" fill="#6b7280" font-family="Arial, sans-serif" font-size="28">Alınış Saati: ${ticketData.alinisSaati}</text>` : ''}
+  ` : ''}
+  
+  <!-- Notes (conditional) -->
+  ${ticketData.not ? `
+  <text x="64" y="${ticketData.cocukSayisi > 0 ? 940 : 920}" fill="#1f2937" font-family="Arial, sans-serif" font-size="31" font-weight="700">NOTLAR</text>
+  <text x="64" y="${ticketData.cocukSayisi > 0 ? 970 : 950}" fill="#6b7280" font-family="Arial, sans-serif" font-size="28">${ticketData.not}</text>
+  ` : ''}
+  
+  <!-- TURSAB Info above footer -->
+  <text x="64" y="${height-160}" fill="#1f2937" font-family="Arial, sans-serif" font-size="24" font-weight="700">TURSAB BELGE NO: 15964</text>
+  
+  <!-- Footer -->
+  <rect x="32" y="${height-120}" width="${width-64}" height="88" rx="0 0 8 8" fill="#f8fafc" stroke="#e5e7eb" stroke-width="1"/>
+  <text x="${width/2}" y="${height-70}" text-anchor="middle" fill="#6b7280" font-family="Arial, sans-serif" font-size="22">Oluşturulma Tarihi: ${ticketData.createdAt}</text>
+  <text x="${width/2}" y="${height-50}" text-anchor="middle" fill="#6b7280" font-family="Arial, sans-serif" font-size="22">İş Bu Bilet Yabancı Tur Operatörü Bölgesindeki Kontrol İçindir.</text>
+  <text x="${width/2}" y="${height-30}" text-anchor="middle" fill="#6b7280" font-family="Arial, sans-serif" font-size="22">Hiçbir Mali Hükmü Yoktur.</text>
+</svg>`
+}
+
+function generateAutoDownloadHTML(svg: string, reservationId: string): string {
   return `<!DOCTYPE html>
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Generating JPG...</title>
+    <title>Bilet İndiriliyor - ${reservationId}</title>
     <style>
         body {
             margin: 0;
-            padding: 0;
-            background: #f5f5f5;
-            font-family: Arial, sans-serif;
+            padding: 40px;
+            background: #f3f4f6;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
             display: flex;
-            justify-content: center;
+            flex-direction: column;
             align-items: center;
             min-height: 100vh;
+            justify-content: center;
         }
         
-        .loading {
+        .container {
+            background: white;
+            padding: 40px;
+            border-radius: 16px;
+            box-shadow: 0 10px 50px rgba(0,0,0,0.1);
+            max-width: 500px;
+            width: 100%;
             text-align: center;
-            color: #333;
         }
         
         .spinner {
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #2563eb;
+            border: 4px solid #e5e7eb;
+            border-top: 4px solid #3b82f6;
             border-radius: 50%;
-            width: 40px;
-            height: 40px;
+            width: 48px;
+            height: 48px;
             animation: spin 1s linear infinite;
             margin: 0 auto 20px;
         }
@@ -107,344 +198,183 @@ function generateAutoDownloadHTML(htmlTicket: string, reservationId: string) {
             100% { transform: rotate(360deg); }
         }
         
-        .hidden {
-            display: none !important;
+        .title {
+            font-size: 24px;
+            font-weight: 600;
+            color: #1f2937;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            color: #6b7280;
+            font-size: 16px;
+            margin-bottom: 30px;
+        }
+        
+        .status {
+            padding: 15px;
+            border-radius: 8px;
+            font-weight: 500;
+            margin-top: 20px;
+        }
+        
+        .status.success {
+            background: #d1fae5;
+            color: #065f46;
+            border: 1px solid #a7f3d0;
+        }
+        
+        .status.error {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #fecaca;
+        }
+        
+        .retry-btn {
+            padding: 12px 24px;
+            background: #3b82f6;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            margin-top: 15px;
+        }
+        
+        .retry-btn:hover {
+            background: #2563eb;
+        }
+        
+        .hidden-svg {
+            position: absolute;
+            left: -9999px;
+            top: -9999px;
         }
     </style>
 </head>
 <body>
-    <div class="loading">
-        <div class="spinner"></div>
-        <div>JPG oluşturuluyor...</div>
-        <div style="font-size: 14px; margin-top: 10px; color: #666;">
-            Bilet JPG formatında indirilecek
-        </div>
+    <div class="container">
+        <div class="spinner" id="spinner"></div>
+        <div class="title">Biletiniz Hazırlanıyor</div>
+        <div class="subtitle">Rezervasyon #${reservationId}</div>
+        <div class="status" id="status" style="display: none;"></div>
+        <button class="retry-btn" id="retryBtn" onclick="convertToPNG()" style="display: none;">
+            Tekrar Dene
+        </button>
     </div>
     
-    <div class="hidden" id="ticket-content">
-        ${htmlTicket}
+    <!-- Hidden SVG for conversion -->
+    <div class="hidden-svg">
+        ${svg}
     </div>
     
-    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
     <script>
-        // Immediately start conversion when page loads
-        window.onload = function() {
-            setTimeout(() => {
-                convertToJPG();
-            }, 500);
-        };
+        // Auto-start conversion when page loads
+        window.addEventListener('load', function() {
+            setTimeout(convertToPNG, 500); // Small delay to ensure DOM is ready
+        });
         
-        function convertToJPG() {
-            const ticketContainer = document.getElementById('ticket-content');
+        async function convertToPNG() {
+            const spinner = document.getElementById('spinner');
+            const status = document.getElementById('status');
+            const retryBtn = document.getElementById('retryBtn');
             
-            if (!ticketContainer) {
-                showError('Ticket content not found');
-                return;
-            }
-            
-            html2canvas(ticketContainer, {
-                scale: 2,
-                useCORS: true,
-                backgroundColor: '#ffffff',
-                width: 800,
-                height: 1200,
-                logging: false,
-                allowTaint: true
-            }).then(canvas => {
-                // Convert to blob for better file handling
-                canvas.toBlob(function(blob) {
-                    if (blob) {
-                        const url = URL.createObjectURL(blob);
-                        const link = document.createElement('a');
-                        link.download = 'ticket-${reservationId}.jpg';
-                        link.href = url;
-                        link.click();
+            try {
+                spinner.style.display = 'block';
+                status.style.display = 'none';
+                retryBtn.style.display = 'none';
+                
+                const svgElement = document.querySelector('svg');
+                if (!svgElement) {
+                    throw new Error('SVG elementi bulunamadı');
+                }
+                
+                // Create canvas
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                
+                // Set high resolution
+                const scale = 2;
+                canvas.width = 800 * scale;
+                canvas.height = 1400 * scale;
+                
+                // Create image from SVG
+                const img = new Image();
+                const svgData = new XMLSerializer().serializeToString(svgElement);
+                const svgBlob = new Blob([svgData], {type: 'image/svg+xml;charset=utf-8'});
+                const url = URL.createObjectURL(svgBlob);
+                
+                img.onload = function() {
+                    try {
+                        // Scale context for high resolution
+                        ctx.scale(scale, scale);
                         
-                        // Clean up and show success
-                        setTimeout(() => {
-                            URL.revokeObjectURL(url);
-                            showSuccess();
-                        }, 100);
-                    } else {
-                        showError('Failed to generate image blob');
+                        // Draw white background
+                        ctx.fillStyle = 'white';
+                        ctx.fillRect(0, 0, 800, 1400);
+                        
+                        // Draw SVG
+                        ctx.drawImage(img, 0, 0, 800, 1400);
+                        
+                        // Convert to PNG and download
+                        canvas.toBlob(function(blob) {
+                            if (blob) {
+                                const downloadUrl = URL.createObjectURL(blob);
+                                const link = document.createElement('a');
+                                link.href = downloadUrl;
+                                link.download = 'ticket-${reservationId}.png';
+                                link.click();
+                                
+                                URL.revokeObjectURL(downloadUrl);
+                                showStatus('Bilet başarıyla indirildi!', 'success');
+                                
+                                // Close window after successful download
+                                setTimeout(() => {
+                                    window.close();
+                                }, 2000);
+                            } else {
+                                throw new Error('PNG oluşturulamadı');
+                            }
+                        }, 'image/png', 0.95);
+                        
+                    } catch (error) {
+                        console.error('Canvas error:', error);
+                        showStatus('PNG oluşturulurken hata: ' + error.message, 'error');
+                    } finally {
+                        URL.revokeObjectURL(url);
+                        spinner.style.display = 'none';
                     }
-                }, 'image/jpeg', 0.95);
-            }).catch(error => {
-                console.error('Error generating JPG:', error);
-                showError('JPG oluşturulamadı: ' + error.message);
-                showManualDownload();
-            });
+                };
+                
+                img.onerror = function() {
+                    URL.revokeObjectURL(url);
+                    showStatus('SVG yüklenemedi', 'error');
+                    spinner.style.display = 'none';
+                };
+                
+                img.src = url;
+                
+            } catch (error) {
+                console.error('Conversion error:', error);
+                showStatus('Hata: ' + error.message, 'error');
+                spinner.style.display = 'none';
+            }
         }
         
-        function showSuccess() {
-            document.querySelector('.loading').innerHTML = 
-                '<div style="color: #059669; font-size: 18px;">✅ JPG başarıyla indirildi!</div>' +
-                '<div style="margin-top: 20px; font-size: 14px; color: #666;">Bu sayfa kapatılabilir</div>';
-        }
-        
-        function showError(message) {
-            document.querySelector('.loading').innerHTML = 
-                '<div style="color: #dc2626; font-size: 18px;">❌ Hata: ' + message + '</div>';
-        }
-        
-        function showManualDownload() {
-            const button = document.createElement('button');
-            button.textContent = '📥 Manuel JPG İndir';
-            button.style.cssText = 'margin-top: 20px; padding: 12px 24px; background: #dc2626; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 16px;';
-            button.onclick = function() {
-                convertToJPG();
-            };
-            document.querySelector('.loading').appendChild(button);
+        function showStatus(message, type) {
+            const status = document.getElementById('status');
+            const retryBtn = document.getElementById('retryBtn');
+            
+            status.textContent = message;
+            status.className = \`status \${type}\`;
+            status.style.display = 'block';
+            
+            if (type === 'error') {
+                retryBtn.style.display = 'inline-block';
+            }
         }
     </script>
 </body>
 </html>`
-}
-
-function generateHTMLTicket(ticketData: any) {
-  return `<style>
-        .ticket-container {
-            max-width: 800px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-            overflow: hidden;
-        }
-        
-        .ticket-header {
-            background: linear-gradient(135deg, #2563eb, #1d4ed8);
-            color: white;
-            padding: 30px;
-            text-align: center;
-        }
-        
-        .ticket-header.red {
-            background: linear-gradient(135deg, #dc2626, #b91c1c);
-        }
-        
-        .ticket-header.blue {
-            background: linear-gradient(135deg, #2563eb, #1d4ed8);
-        }
-        
-        .logo-container {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-bottom: 15px;
-        }
-        
-        .tursab-logo {
-            width: 60px;
-            height: 60px;
-            margin-right: 15px;
-        }
-        
-        .company-name {
-            font-size: 32px;
-            font-weight: bold;
-            margin-bottom: 8px;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
-        }
-        
-        .ticket-title {
-            font-size: 24px;
-            font-weight: 600;
-            margin-bottom: 15px;
-            opacity: 0.9;
-        }
-        
-        .reservation-id {
-            font-size: 18px;
-            background: rgba(255,255,255,0.2);
-            padding: 8px 16px;
-            border-radius: 20px;
-            display: inline-block;
-            font-family: 'Courier New', monospace;
-        }
-        
-        .ticket-content {
-            padding: 30px;
-        }
-        
-        .section {
-            margin-bottom: 25px;
-            padding-bottom: 20px;
-            border-bottom: 1px solid #e5e7eb;
-        }
-        
-        .section:last-child {
-            border-bottom: none;
-            margin-bottom: 0;
-        }
-        
-        .section-title {
-            font-size: 20px;
-            font-weight: 600;
-            color: #1f2937;
-            margin-bottom: 15px;
-            padding-bottom: 8px;
-            border-bottom: 2px solid #3b82f6;
-            display: inline-block;
-        }
-        
-        .info-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 15px;
-        }
-        
-        .info-item {
-            display: flex;
-            align-items: center;
-            padding: 12px 0;
-        }
-        
-        .info-label {
-            font-weight: 600;
-            color: #6b7280;
-            min-width: 120px;
-            margin-right: 15px;
-        }
-        
-        .info-value {
-            font-weight: 500;
-            color: #1f2937;
-        }
-        
-        .total-amount {
-            background: #f0fdf4;
-            border: 2px solid #22c55e;
-            border-radius: 8px;
-            padding: 15px;
-            text-align: center;
-            margin: 20px 0;
-        }
-        
-        .total-amount .label {
-            font-size: 18px;
-            font-weight: 600;
-            color: #166534;
-            margin-bottom: 8px;
-        }
-        
-        .total-amount .amount {
-            font-size: 28px;
-            font-weight: bold;
-            color: #16a34a;
-        }
-        
-        .ticket-footer {
-            background: #f8fafc;
-            padding: 20px 30px;
-            text-align: center;
-            border-top: 1px solid #e5e7eb;
-        }
-        
-        .footer-text {
-            font-size: 14px;
-            color: #6b7280;
-            line-height: 1.5;
-        }
-    </style>
-    <div class="ticket-container">
-        <div class="ticket-header ${ticketData.biletTipi === 'Kendi Aracı İle Gelecek' ? 'red' : 'blue'}">
-            <div class="logo-container">
-                <img src="/tursab.png" alt="TÜRSAB Logo" class="tursab-logo">
-                <div class="company-name">APPRECIATE TRAVEL</div>
-            </div>
-            <div class="ticket-title">TUR BİLETİ</div>
-            <div class="reservation-id">${ticketData.reservationId}</div>
-        </div>
-        
-        <div class="ticket-content">
-            <div class="section">
-                <div class="section-title">MÜŞTERİ BİLGİLERİ</div>
-                <div class="info-grid">
-                    <div class="info-item">
-                        <span class="info-label">Ad Soyad:</span>
-                        <span class="info-value">${ticketData.adSoyad}</span>
-                    </div>
-                    <div class="info-item">
-                        <span class="info-label">Telefon:</span>
-                        <span class="info-value">${ticketData.telefon}</span>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="section">
-                <div class="section-title">TUR BİLGİLERİ</div>
-                <div class="info-grid">
-                    <div class="info-item">
-                        <span class="info-label">Tur Adı:</span>
-                        <span class="info-value">${ticketData.turAdi}</span>
-                    </div>
-                    <div class="info-item">
-                        <span class="info-label">Tarih:</span>
-                        <span class="info-value">${ticketData.turTarihi}</span>
-                    </div>
-                    <div class="info-item">
-                        <span class="info-label">Kişi Sayısı:</span>
-                        <span class="info-value">${ticketData.kacKisi}</span>
-                    </div>
-                    <div class="info-item">
-                        <span class="info-label">Kişi Başı Fiyat:</span>
-                        <span class="info-value">${ticketData.turFiyati}</span>
-                    </div>
-                </div>
-                
-                <div class="total-amount">
-                    <div class="label">TOPLAM TUTAR</div>
-                    <div class="amount">${ticketData.toplamTutar}</div>
-                </div>
-            </div>
-            
-            <div class="section">
-                <div class="section-title">BİLET TİPİ</div>
-                <div class="info-grid">
-                    <div class="info-item">
-                        <span class="info-label">Tip:</span>
-                        <span class="info-value">${ticketData.biletTipi}</span>
-                    </div>
-                </div>
-            </div>
-            
-            ${ticketData.biletTipi === 'Servis Kullanacak' && (ticketData.alinisYeri || ticketData.alinisSaati) ? `
-            <div class="section">
-                <div class="section-title">ALIŞ BİLGİLERİ</div>
-                <div class="info-grid">
-                    ${ticketData.alinisYeri ? `
-                    <div class="info-item">
-                        <span class="info-label">Alınış Yeri:</span>
-                        <span class="info-value">${ticketData.alinisYeri}</span>
-                    </div>
-                    ` : ''}
-                    ${ticketData.alinisSaati ? `
-                    <div class="info-item">
-                        <span class="info-label">Alınış Saati:</span>
-                        <span class="info-value">${ticketData.alinisSaati}</span>
-                    </div>
-                    ` : ''}
-                </div>
-            </div>
-            ` : ''}
-            
-            ${ticketData.not ? `
-            <div class="section">
-                <div class="section-title">NOTLAR</div>
-                <div class="info-item">
-                    <span class="info-value">${ticketData.not}</span>
-                </div>
-            </div>
-            ` : ''}
-        </div>
-        
-        <div class="ticket-footer">
-            <div class="footer-text">
-                Bu bilet elektronik olarak oluşturulmuştur.<br>
-                Oluşturulma Tarihi: ${ticketData.createdAt}<br>
-                İş Bu Bilet Yabancı Tur Operatörü Bölgesindeki Kontrol İçindir. Hiçbir Mali Hükmü Yoktur.
-            </div>
-        </div>
-    </div>`
 }

@@ -20,9 +20,7 @@ export default defineEventHandler(async (event) => {
   const take = parseInt(limit as string)
 
   // Filtre koşulları
-  const where: any = {
-    isDeleted: false
-  }
+  const where: any = {}
 
   if (search) {
     where.OR = [

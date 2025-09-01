@@ -16,10 +16,7 @@ export default defineEventHandler(async (event) => {
 
   try {
     const booking = await prisma.booking.findUnique({
-      where: {
-        id: id,
-        isDeleted: false
-      }
+      where: { id: id }
     })
 
     if (!booking) {
@@ -34,7 +31,7 @@ export default defineEventHandler(async (event) => {
     console.error('Rezervasyon getirme hatası:', error)
     throw createError({
       statusCode: 500,
-      statusMessage: 'Rezervasyon getirilemedi'
+      statusMessage: 'Rezervasyon alınamadı'
     })
   }
 })

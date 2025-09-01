@@ -3,73 +3,86 @@ import { requireAuth } from '../../utils/auth'
 
 export default defineEventHandler(async (event) => {
   requireAuth(event)
-  
   const prisma = getPrisma(event)
-  
+
   try {
     // Get total bookings
-    const totalBookings = await prisma.booking.count({
-      where: { isDeleted: false }
+    const totalBookings = await prisma.booking.count()
+
+    // Get today's bookings
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const tomorrow = new Date(today)
+    tomorrow.setDate(tomorrow.getDate() + 1)
+
+    const todayBookings = await prisma.booking.count({
+      where: {
+        turTarihi: {
+          gte: today,
+          lt: tomorrow
+        }
+      }
     })
-    
+
     // Get this month's bookings
-    const now = new Date()
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
-    const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1)
-    const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0)
-    
-    const thisMonth = await prisma.booking.count({
+    const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1)
+    const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0)
+
+    const monthBookings = await prisma.booking.count({
       where: {
-        isDeleted: false,
-        createdAt: {
-          gte: startOfMonth
+        turTarihi: {
+          gte: startOfMonth,
+          lte: endOfMonth
         }
       }
     })
-    
-    const lastMonth = await prisma.booking.count({
-      where: {
-        isDeleted: false,
-        createdAt: {
-          gte: startOfLastMonth,
-          lte: endOfLastMonth
-        }
-      }
-    })
-    
-    // Get revenue stats
-    const revenueData = await prisma.booking.aggregate({
-      where: { isDeleted: false },
+
+    // Get total revenue
+    const totalRevenue = await prisma.booking.aggregate({
       _sum: {
         toplamTutar: true
       }
     })
-    
-    const monthlyRevenueData = await prisma.booking.aggregate({
-      where: {
-        isDeleted: false,
-        createdAt: {
-          gte: startOfMonth
-        }
+
+    // Get today's revenue
+    const todayRevenue = await prisma.booking.aggregate({
+      _sum: {
+        toplamTutar: true
       },
-      _sum: {
-        toplamTutar: true
+      where: {
+        turTarihi: {
+          gte: today,
+          lt: tomorrow
+        }
       }
     })
-    
+
+    // Get this month's revenue
+    const monthRevenue = await prisma.booking.aggregate({
+      _sum: {
+        toplamTutar: true
+      },
+      where: {
+        turTarihi: {
+          gte: startOfMonth,
+          lte: endOfMonth
+        }
+      }
+    })
+
     return {
       totalBookings,
-      activeBookings: totalBookings,
-      thisMonth,
-      lastMonth,
-      totalRevenue: revenueData._sum.toplamTutar || 0,
-      monthlyRevenue: monthlyRevenueData._sum.toplamTutar || 0
+      todayBookings,
+      monthBookings,
+      totalRevenue: totalRevenue._sum.toplamTutar || 0,
+      todayRevenue: todayRevenue._sum.toplamTutar || 0,
+      monthRevenue: monthRevenue._sum.toplamTutar || 0
     }
   } catch (error) {
-    console.error('Dashboard stats error:', error)
+    console.error('Dashboard stats hatası:', error)
     throw createError({
       statusCode: 500,
-      statusMessage: 'İstatistikler alınamadı'
+      statusMessage: 'Dashboard istatistikleri alınamadı'
     })
   }
 })
