@@ -212,68 +212,30 @@
         <!-- Yedekleme İşlemleri -->
         <div class="bg-white shadow rounded-lg">
           <div class="px-4 py-5 sm:p-6">
-            <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">
-              Yedekleme İşlemleri
+            <h3 class="text-lg leading-6 font-medium text-gray-900 mb-1">
+              Yedekleme
             </h3>
-            
-            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <!-- Manuel Yedekleme -->
-              <div class="border border-gray-200 rounded-lg p-4">
-                <h4 class="text-sm font-medium text-gray-900 mb-2">Manuel Yedekleme</h4>
-                <p class="text-sm text-gray-500 mb-3">
-                  Veritabanının anlık yedeğini alın
-                </p>
-                <button
-                  @click="createBackup"
-                  :disabled="backupLoading"
-                  class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed">
-                  <svg v-if="backupLoading" class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
-                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  {{ backupLoading ? 'Yedekleniyor...' : 'Yedek Al' }}
-                </button>
-              </div>
+            <p class="text-sm text-gray-500 mb-4">
+              Tüm rezervasyon ve tur verilerinizi tek bir JSON dosyası olarak indirin.
+              Dosyayı güvenli bir yerde saklayın; gerektiğinde verileriniz bu dosyadan geri yüklenebilir.
+            </p>
 
-              <!-- Otomatik Yedekleme Durumu -->
-              <div class="border border-gray-200 rounded-lg p-4">
-                <h4 class="text-sm font-medium text-gray-900 mb-2">Otomatik Yedekleme</h4>
-                <p class="text-sm text-gray-500 mb-3">
-                  Son otomatik yedek: {{ lastBackupDate }}
-                </p>
-                <div class="flex items-center">
-                  <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                    <svg class="-ml-0.5 mr-1.5 h-2 w-2 text-green-400" fill="currentColor" viewBox="0 0 8 8">
-                      <circle cx="4" cy="4" r="3" />
-                    </svg>
-                    Aktif
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <!-- Yedek Dosyaları Listesi -->
-            <div class="mt-6">
-              <h4 class="text-sm font-medium text-gray-900 mb-3">Mevcut Yedekler</h4>
-              <div class="bg-gray-50 rounded-lg p-4">
-                <div v-if="backups.length === 0" class="text-sm text-gray-500 text-center py-4">
-                  Henüz yedek dosyası bulunmamaktadır.
-                </div>
-                <div v-else class="space-y-2">
-                  <div v-for="backup in backups" :key="backup.name" 
-                    class="flex items-center justify-between py-2 px-3 bg-white rounded border">
-                    <div>
-                      <div class="text-sm font-medium text-gray-900">{{ backup.name }}</div>
-                      <div class="text-xs text-gray-500">{{ backup.size }} • {{ backup.date }}</div>
-                    </div>
-                    <button
-                      @click="downloadBackup(backup.name)"
-                      class="text-blue-600 hover:text-blue-800 text-sm font-medium">
-                      İndir
-                    </button>
-                  </div>
-                </div>
-              </div>
+            <div class="border border-gray-200 rounded-lg p-4">
+              <h4 class="text-sm font-medium text-gray-900 mb-2">Manuel Yedek İndir</h4>
+              <p class="text-sm text-gray-500 mb-3">
+                İndirilen dosya o anki tüm verilerin tam bir kopyasıdır.
+              </p>
+              <button
+                @click="exportBackup"
+                :disabled="backupLoading"
+                class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed">
+                <svg v-if="backupLoading" class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                {{ backupLoading ? 'Hazırlanıyor...' : 'Yedek İndir (JSON)' }}
+              </button>
+              <p v-if="backupError" class="mt-2 text-sm text-red-600">{{ backupError }}</p>
             </div>
           </div>
         </div>
@@ -367,6 +329,7 @@ definePageMeta({
 // Reactive data
 const passwordLoading = ref(false)
 const backupLoading = ref(false)
+const backupError = ref('')
 
 // Tur yönetimi
 const tours = ref([])
@@ -474,12 +437,6 @@ const passwordForm = ref({
 
 const passwordErrors = ref({})
 
-const backups = ref([
-  { name: 'backup_2024-01-15_14-30.db', size: '2.1 MB', date: '15 Ocak 2024, 14:30' },
-  { name: 'backup_2024-01-14_14-30.db', size: '2.0 MB', date: '14 Ocak 2024, 14:30' },
-  { name: 'backup_2024-01-13_14-30.db', size: '1.9 MB', date: '13 Ocak 2024, 14:30' }
-])
-
 const systemInfo = ref({
   version: '1.0.0',
   nodeVersion: '18.17.0',
@@ -487,11 +444,6 @@ const systemInfo = ref({
   totalBookings: '0',
   lastUpdate: '22 Ağustos 2024',
   uptime: '2 gün, 14 saat'
-})
-
-// Computed
-const lastBackupDate = computed(() => {
-  return backups.value.length > 0 ? backups.value[0].date : 'Henüz yedek alınmadı'
 })
 
 // Methods
@@ -545,30 +497,34 @@ const changePassword = async () => {
   }
 }
 
-const createBackup = async () => {
+const exportBackup = async () => {
+  backupError.value = ''
   backupLoading.value = true
-  
+
   try {
-    const result = await $fetch('/api/backup/create', { method: 'POST' })
-    
-    // Add new backup to list
-    backups.value.unshift({
-      name: result.filename,
-      size: result.size,
-      date: new Date().toLocaleString('tr-TR')
-    })
-    
-    alert('Yedek başarıyla oluşturuldu')
+    // Veriyi blob olarak indir (auth cookie otomatik gönderilir).
+    const blob = await $fetch('/api/backup/export', { responseType: 'blob' })
+
+    // İndirilen dosya adını Content-Disposition'a bırakmak yerine burada üretiyoruz.
+    const now = new Date()
+    const pad = (n) => String(n).padStart(2, '0')
+    const stamp = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}_${pad(now.getHours())}-${pad(now.getMinutes())}-${pad(now.getSeconds())}`
+    const filename = `appreciate-crm-yedek_${stamp}.json`
+
+    const url = window.URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = filename
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+    window.URL.revokeObjectURL(url)
   } catch (error) {
-    console.error('Yedek oluşturma hatası:', error)
-    alert('Yedek oluşturulurken hata oluştu')
+    console.error('Yedek indirme hatası:', error)
+    backupError.value = error?.data?.message || 'Yedek indirilemedi'
   } finally {
     backupLoading.value = false
   }
-}
-
-const downloadBackup = (filename) => {
-  window.open(`/api/backup/download?file=${filename}`)
 }
 
 const loadSystemInfo = async () => {
@@ -577,15 +533,6 @@ const loadSystemInfo = async () => {
     systemInfo.value = info
   } catch (error) {
     console.error('Sistem bilgileri yüklenirken hata:', error)
-  }
-}
-
-const loadBackups = async () => {
-  try {
-    const backupList = await $fetch('/api/backup/list')
-    backups.value = backupList
-  } catch (error) {
-    console.error('Yedek listesi yüklenirken hata:', error)
   }
 }
 
@@ -617,7 +564,6 @@ const checkAuthAndLoad = async () => {
     await $fetch('/api/auth/check')
     await loadTours()
     await loadSystemInfo()
-    await loadBackups()
   } catch (error) {
     // User is not authenticated, redirect to login
     if (error.statusCode === 401) {
