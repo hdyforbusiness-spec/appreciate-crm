@@ -1,5 +1,5 @@
 import { getPrisma } from '../../utils/prisma'
-import { generateReservationId, calculateTotal } from '../../utils/helpers'
+import { generateReservationId, calculateTotal, calculateCost } from '../../utils/helpers'
 import { validateBooking } from '../../utils/validators'
 import { requireAuth } from '../../utils/auth'
 
@@ -35,6 +35,12 @@ export default defineEventHandler(async (event) => {
     // Toplam tutarı hesapla
     const toplamTutar = calculateTotal(body.kacKisi, body.turFiyati, body.cocukSayisi || 0)
 
+    // Tur maliyetini snapshot'la (kâr hesabı için). Tur bulunamazsa 0.
+    const turAdi = body.turAdi.trim()
+    const tour = await prisma.tour.findFirst({ where: { ad: turAdi } })
+    const birimMaliyet = tour ? Number(tour.maliyet) : 0
+    const toplamMaliyet = calculateCost(body.kacKisi, birimMaliyet, body.cocukSayisi || 0)
+
     const booking = await prisma.booking.create({
       data: {
         reservationId,
@@ -43,9 +49,11 @@ export default defineEventHandler(async (event) => {
         kacKisi: body.kacKisi,
         cocukSayisi: body.cocukSayisi || 0,
         turTarihi: new Date(body.turTarihi),
-        turAdi: body.turAdi.trim(),
+        turAdi,
         turFiyati: body.turFiyati,
         toplamTutar,
+        birimMaliyet,
+        toplamMaliyet,
         not: body.not?.trim() || null,
         biletTipi: body.biletTipi || 'Servis Kullanacak',
         alinisYeri: body.biletTipi === 'Servis Kullanacak' ? body.alinisYeri?.trim() || null : null,

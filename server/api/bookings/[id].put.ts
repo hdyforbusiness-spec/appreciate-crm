@@ -1,7 +1,7 @@
 import { getPrisma } from '../../utils/prisma'
 import { requireAuth } from '../../utils/auth'
 import { validateBookingDataStrict } from '../../utils/validators'
-import { calculateTotal } from '../../utils/helpers'
+import { calculateTotal, calculateCost } from '../../utils/helpers'
 
 export default defineEventHandler(async (event) => {
   requireAuth(event)
@@ -42,8 +42,18 @@ export default defineEventHandler(async (event) => {
 
     // Calculate the total amount server-side
     const toplamTutar = calculateTotal(
-      parseInt(body.kacKisi), 
-      parseFloat(body.turFiyati), 
+      parseInt(body.kacKisi),
+      parseFloat(body.turFiyati),
+      parseInt(body.cocukSayisi) || 0
+    )
+
+    // Tur maliyetini snapshot'la. Tur bulunamazsa mevcut snapshot korunur.
+    const turAdi = (body.turAdi || '').trim()
+    const tour = await prisma.tour.findFirst({ where: { ad: turAdi } })
+    const birimMaliyet = tour ? Number(tour.maliyet) : Number(existingBooking.birimMaliyet)
+    const toplamMaliyet = calculateCost(
+      parseInt(body.kacKisi),
+      birimMaliyet,
       parseInt(body.cocukSayisi) || 0
     )
 
@@ -56,9 +66,11 @@ export default defineEventHandler(async (event) => {
         kacKisi: parseInt(body.kacKisi),
         cocukSayisi: parseInt(body.cocukSayisi) || 0,
         turTarihi: new Date(body.turTarihi),
-        turAdi: body.turAdi,
+        turAdi,
         turFiyati: parseFloat(body.turFiyati),
         toplamTutar,
+        birimMaliyet,
+        toplamMaliyet,
         not: body.not || null,
         biletTipi: body.biletTipi,
         alinisYeri: body.alinisYeri || null,
@@ -71,7 +83,8 @@ export default defineEventHandler(async (event) => {
       message: 'Rezervasyon güncellendi',
       booking: updatedBooking
     }
-  } catch (error) {
+  } catch (error: any) {
+    if (error?.statusCode) throw error
     console.error('Rezervasyon güncelleme hatası:', error)
     throw createError({
       statusCode: 500,

@@ -474,9 +474,9 @@ const loadDashboardData = async () => {
       const totalChildCount = recentBookings.value.reduce((sum, booking) => sum + (booking.cocukSayisi || 0), 0)
       const monthChildCount = thisMonthBookings.reduce((sum, booking) => sum + (booking.cocukSayisi || 0), 0)
       
-      // Calculate costs (1200 TL per adult, 600 TL per child)
-      const totalCost = totalPersonCount * 1200 + totalChildCount * 600
-      const monthCost = monthPersonCount * 1200 + monthChildCount * 600
+      // Maliyet, her rezervasyonun kendi snapshot'ından (toplamMaliyet) gelir
+      const totalCost = recentBookings.value.reduce((sum, booking) => sum + (Number(booking.toplamMaliyet) || 0), 0)
+      const monthCost = thisMonthBookings.reduce((sum, booking) => sum + (Number(booking.toplamMaliyet) || 0), 0)
       
       // Calculate profit (Revenue - Cost)
       const totalProfit = totalRevenue - totalCost

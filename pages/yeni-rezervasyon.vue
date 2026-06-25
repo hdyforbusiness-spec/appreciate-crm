@@ -166,16 +166,23 @@
                   Tur Adı <span class="text-red-500">*</span>
                 </label>
                 <div class="mt-1">
-                  <input
+                  <select
                     id="turAdi"
                     v-model="form.turAdi"
-                    type="text"
                     required
                     class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md"
                     :class="{ 'border-red-300': errors.turAdi }"
-                    placeholder="Tur adı"
-                  />
+                  >
+                    <option value="" disabled>Tur seçiniz</option>
+                    <option v-for="tour in tours" :key="tour.id" :value="tour.ad">
+                      {{ tour.ad }}
+                    </option>
+                  </select>
                   <p v-if="errors.turAdi" class="mt-2 text-sm text-red-600">{{ errors.turAdi }}</p>
+                  <p v-if="tours.length === 0" class="mt-2 text-sm text-amber-600">
+                    Henüz tur tanımlı değil.
+                    <NuxtLink to="/ayarlar" class="font-medium underline">Ayarlar</NuxtLink>'dan tur ekleyin.
+                  </p>
                 </div>
               </div>
 
@@ -333,6 +340,7 @@ const router = useRouter()
 const loading = ref(false)
 const isEdit = ref(false)
 const bookingId = ref(null)
+const tours = ref([])
 
 const form = ref({
   adSoyad: '',
@@ -503,16 +511,33 @@ const loadBooking = async (id) => {
   }
 }
 
+const loadTours = async () => {
+  try {
+    const data = await $fetch('/api/tours', { query: { aktif: 'true' } })
+    tours.value = data.tours || []
+  } catch (error) {
+    console.error('Turlar yüklenirken hata:', error)
+    tours.value = []
+  }
+}
+
 // Check authentication and load data
 const checkAuthAndLoad = async () => {
   try {
     await $fetch('/api/auth/check')
-    
+
+    await loadTours()
+
     const editId = route.query.edit
     if (editId) {
       isEdit.value = true
       bookingId.value = editId
       await loadBooking(editId)
+
+      // Düzenlenen rezervasyonun turu listede yoksa (pasif/silinmiş) seçili kalsın
+      if (form.value.turAdi && !tours.value.some(t => t.ad === form.value.turAdi)) {
+        tours.value.push({ id: '_current', ad: form.value.turAdi })
+      }
     }
   } catch (error) {
     // User is not authenticated, redirect to login

@@ -41,9 +41,9 @@ export default defineEventHandler(async (event) => {
     const totalPersonCount = bookings.reduce((sum, booking) => sum + booking.kacKisi, 0)
     const totalChildCount = bookings.reduce((sum, booking) => sum + booking.cocukSayisi, 0)
     
-    // Calculate costs (1200 TL per adult, 600 TL per child)
-    const totalCost = totalPersonCount * 1200 + totalChildCount * 600
-    
+    // Maliyet, her rezervasyonun kendi snapshot'ından toplanır
+    const totalCost = bookings.reduce((sum, booking) => sum + Number(booking.toplamMaliyet), 0)
+
     // Calculate profit (Revenue - Cost)
     const totalProfit = totalRevenue - totalCost
 
@@ -67,7 +67,7 @@ export default defineEventHandler(async (event) => {
       acc[date].revenue += Number(booking.toplamTutar)
       acc[date].personCount += booking.kacKisi
       acc[date].childCount += booking.cocukSayisi
-      acc[date].cost += booking.kacKisi * 1200 + booking.cocukSayisi * 600
+      acc[date].cost += Number(booking.toplamMaliyet)
       acc[date].profit = acc[date].revenue - acc[date].cost
       
       return acc

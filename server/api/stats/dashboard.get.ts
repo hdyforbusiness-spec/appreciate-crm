@@ -110,13 +110,27 @@ export default defineEventHandler(async (event) => {
       }
     })
 
-    // Calculate total cost (1200 TL per adult, 600 TL per child)
-    const totalCost = (totalPersonCount._sum.kacKisi || 0) * 1200 + (totalChildCount._sum.cocukSayisi || 0) * 600
-    const monthCost = (monthPersonCount._sum.kacKisi || 0) * 1200 + (monthChildCount._sum.cocukSayisi || 0) * 600
+    // Maliyet, her rezervasyonun kendi snapshot'ından (toplamMaliyet) toplanır
+    const totalCostAgg = await prisma.booking.aggregate({
+      _sum: { toplamMaliyet: true }
+    })
+
+    const monthCostAgg = await prisma.booking.aggregate({
+      _sum: { toplamMaliyet: true },
+      where: {
+        turTarihi: {
+          gte: startOfMonth,
+          lte: endOfMonth
+        }
+      }
+    })
+
+    const totalCost = Number(totalCostAgg._sum.toplamMaliyet || 0)
+    const monthCost = Number(monthCostAgg._sum.toplamMaliyet || 0)
 
     // Calculate profit (Revenue - Cost)
-    const totalProfit = (totalRevenue._sum.toplamTutar || 0) - totalCost
-    const monthProfit = (monthRevenue._sum.toplamTutar || 0) - monthCost
+    const totalProfit = Number(totalRevenue._sum.toplamTutar || 0) - totalCost
+    const monthProfit = Number(monthRevenue._sum.toplamTutar || 0) - monthCost
 
     return {
       totalBookings,

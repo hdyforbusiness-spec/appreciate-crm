@@ -21,6 +21,16 @@ export function calculateTotal(kacKisi: number, turFiyati: number, cocukSayisi: 
 }
 
 /**
+ * Toplam maliyeti hesaplar (kâr hesabı için)
+ * Çocuk maliyeti kişi başı maliyetin yarısıdır (satış fiyatı mantığıyla simetrik).
+ */
+export function calculateCost(kacKisi: number, birimMaliyet: number, cocukSayisi: number = 0): number {
+  const adultCost = kacKisi * birimMaliyet
+  const kidCost = cocukSayisi * (birimMaliyet * 0.5)
+  return adultCost + kidCost
+}
+
+/**
  * Tarihi Türkçe formatında döndürür
  */
 export function formatDateTR(date: Date): string {

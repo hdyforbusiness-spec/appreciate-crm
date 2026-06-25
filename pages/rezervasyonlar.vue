@@ -258,10 +258,11 @@ const loadBookings = async () => {
 
 const loadTurListesi = async () => {
   try {
-    // This would fetch unique tour names from the API
-    turListesi.value = ['Kapadokya Turu', 'Pamukkale Turu', 'Antalya Turu']
+    const data = await $fetch('/api/tours')
+    turListesi.value = (data.tours || []).map(t => t.ad)
   } catch (error) {
     console.error('Tur listesi yüklenirken hata:', error)
+    turListesi.value = []
   }
 }
 

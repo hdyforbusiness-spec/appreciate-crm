@@ -12,7 +12,98 @@
       </div>
 
       <div class="space-y-6">
-        
+
+        <!-- Tur Yönetimi -->
+        <div class="bg-white shadow rounded-lg">
+          <div class="px-4 py-5 sm:p-6">
+            <h3 class="text-lg leading-6 font-medium text-gray-900 mb-1">
+              Tur Yönetimi
+            </h3>
+            <p class="text-sm text-gray-500 mb-4">
+              Turları ve kişi başı maliyetlerini yönetin. Maliyet, kâr hesabında kullanılır (çocuk maliyeti yarı fiyat).
+            </p>
+
+            <!-- Yeni / Düzenle Formu -->
+            <form @submit.prevent="saveTour" class="grid grid-cols-1 gap-4 sm:grid-cols-12 sm:items-end border border-gray-200 rounded-lg p-4 mb-4">
+              <div class="sm:col-span-6">
+                <label for="tourAd" class="block text-sm font-medium text-gray-700">
+                  Tur Adı <span class="text-red-500">*</span>
+                </label>
+                <input
+                  id="tourAd"
+                  v-model="tourForm.ad"
+                  type="text"
+                  required
+                  class="mt-1 shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                  placeholder="Örn. Kapadokya Turu"
+                />
+              </div>
+              <div class="sm:col-span-3">
+                <label for="tourMaliyet" class="block text-sm font-medium text-gray-700">
+                  Kişi Başı Maliyet (₺) <span class="text-red-500">*</span>
+                </label>
+                <input
+                  id="tourMaliyet"
+                  v-model.number="tourForm.maliyet"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  required
+                  class="mt-1 shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                  placeholder="0.00"
+                />
+              </div>
+              <div class="sm:col-span-3 flex items-center gap-2">
+                <button
+                  type="submit"
+                  :disabled="tourLoading"
+                  class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed">
+                  {{ tourForm.id ? 'Güncelle' : 'Ekle' }}
+                </button>
+                <button
+                  v-if="tourForm.id"
+                  type="button"
+                  @click="resetTourForm"
+                  class="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+                  İptal
+                </button>
+              </div>
+              <p v-if="tourError" class="sm:col-span-12 text-sm text-red-600">{{ tourError }}</p>
+            </form>
+
+            <!-- Tur Listesi -->
+            <div class="bg-gray-50 rounded-lg p-4">
+              <div v-if="tours.length === 0" class="text-sm text-gray-500 text-center py-4">
+                Henüz tur eklenmemiş.
+              </div>
+              <div v-else class="space-y-2">
+                <div v-for="tour in tours" :key="tour.id"
+                  class="flex items-center justify-between py-2 px-3 bg-white rounded border">
+                  <div class="flex items-center gap-3">
+                    <span class="text-sm font-medium text-gray-900">{{ tour.ad }}</span>
+                    <span v-if="!tour.aktif" class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600">
+                      Pasif
+                    </span>
+                  </div>
+                  <div class="flex items-center gap-4">
+                    <span class="text-sm text-gray-700">{{ formatCurrency(Number(tour.maliyet)) }} / kişi</span>
+                    <button
+                      @click="editTour(tour)"
+                      class="text-blue-600 hover:text-blue-800 text-sm font-medium">
+                      Düzenle
+                    </button>
+                    <button
+                      @click="deleteTour(tour)"
+                      class="text-red-600 hover:text-red-800 text-sm font-medium">
+                      Sil
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- Parola Değiştirme -->
         <div class="bg-white shadow rounded-lg">
           <div class="px-4 py-5 sm:p-6">
@@ -255,6 +346,97 @@ definePageMeta({
 const passwordLoading = ref(false)
 const backupLoading = ref(false)
 
+// Tur yönetimi
+const tours = ref([])
+const tourLoading = ref(false)
+const tourError = ref('')
+const tourForm = ref({
+  id: null,
+  ad: '',
+  maliyet: 0,
+  aktif: true
+})
+
+const formatCurrency = (amount) => {
+  return new Intl.NumberFormat('tr-TR', {
+    style: 'currency',
+    currency: 'TRY'
+  }).format(amount || 0)
+}
+
+const loadTours = async () => {
+  try {
+    const data = await $fetch('/api/tours')
+    tours.value = data.tours || []
+  } catch (error) {
+    console.error('Turlar yüklenirken hata:', error)
+  }
+}
+
+const resetTourForm = () => {
+  tourForm.value = { id: null, ad: '', maliyet: 0, aktif: true }
+  tourError.value = ''
+}
+
+const editTour = (tour) => {
+  tourForm.value = {
+    id: tour.id,
+    ad: tour.ad,
+    maliyet: Number(tour.maliyet),
+    aktif: tour.aktif
+  }
+  tourError.value = ''
+}
+
+const saveTour = async () => {
+  tourError.value = ''
+
+  if (!tourForm.value.ad || tourForm.value.ad.trim().length < 2) {
+    tourError.value = 'Tur adı en az 2 karakter olmalıdır'
+    return
+  }
+  if (tourForm.value.maliyet === null || tourForm.value.maliyet < 0) {
+    tourError.value = 'Maliyet 0 veya daha büyük olmalıdır'
+    return
+  }
+
+  tourLoading.value = true
+  try {
+    const payload = {
+      ad: tourForm.value.ad.trim(),
+      maliyet: tourForm.value.maliyet,
+      aktif: tourForm.value.aktif
+    }
+
+    if (tourForm.value.id) {
+      await $fetch(`/api/tours/${tourForm.value.id}`, { method: 'PUT', body: payload })
+    } else {
+      await $fetch('/api/tours', { method: 'POST', body: payload })
+    }
+
+    resetTourForm()
+    await loadTours()
+  } catch (error) {
+    console.error('Tur kaydetme hatası:', error)
+    tourError.value = error?.data?.message || error?.statusMessage || 'Tur kaydedilemedi'
+  } finally {
+    tourLoading.value = false
+  }
+}
+
+const deleteTour = async (tour) => {
+  if (!confirm(`"${tour.ad}" turunu silmek istediğinizden emin misiniz?`)) {
+    return
+  }
+  try {
+    await $fetch(`/api/tours/${tour.id}`, { method: 'DELETE' })
+    await loadTours()
+  } catch (error) {
+    console.error('Tur silme hatası:', error)
+    alert(error?.data?.message || 'Tur silinemedi')
+  }
+}
+
 const passwordForm = ref({
   currentPassword: '',
   newPassword: '',
@@ -404,6 +586,7 @@ const resetAllData = async () => {
 const checkAuthAndLoad = async () => {
   try {
     await $fetch('/api/auth/check')
+    await loadTours()
     await loadSystemInfo()
     await loadBackups()
   } catch (error) {
