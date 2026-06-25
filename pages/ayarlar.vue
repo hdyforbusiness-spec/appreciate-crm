@@ -24,36 +24,55 @@
             </p>
 
             <!-- Yeni / Düzenle Formu -->
-            <form @submit.prevent="saveTour" class="grid grid-cols-1 gap-4 sm:grid-cols-12 sm:items-end border border-gray-200 rounded-lg p-4 mb-4">
-              <div class="sm:col-span-6">
-                <label for="tourAd" class="block text-sm font-medium text-gray-700">
-                  Tur Adı <span class="text-red-500">*</span>
-                </label>
-                <input
-                  id="tourAd"
-                  v-model="tourForm.ad"
-                  type="text"
-                  required
-                  class="mt-1 shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md"
-                  placeholder="Örn. Kapadokya Turu"
-                />
+            <form @submit.prevent="saveTour" class="border border-gray-200 rounded-lg p-4 mb-4">
+              <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                <div>
+                  <label for="tourAd" class="block text-sm font-medium text-gray-700">
+                    Tur Adı <span class="text-red-500">*</span>
+                  </label>
+                  <input
+                    id="tourAd"
+                    v-model="tourForm.ad"
+                    type="text"
+                    required
+                    class="mt-1 shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                    placeholder="Örn. Kapadokya Turu"
+                  />
+                </div>
+                <div>
+                  <label for="tourMaliyetServis" class="block text-sm font-medium text-gray-700">
+                    Servis Maliyeti (₺/kişi) <span class="text-red-500">*</span>
+                  </label>
+                  <input
+                    id="tourMaliyetServis"
+                    v-model.number="tourForm.maliyetServis"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    required
+                    class="mt-1 shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                    placeholder="0.00"
+                  />
+                  <p class="mt-1 text-xs text-gray-500">Servis Kullanacak müşteri</p>
+                </div>
+                <div>
+                  <label for="tourMaliyetKendiArac" class="block text-sm font-medium text-gray-700">
+                    Kendi Aracı Maliyeti (₺/kişi) <span class="text-red-500">*</span>
+                  </label>
+                  <input
+                    id="tourMaliyetKendiArac"
+                    v-model.number="tourForm.maliyetKendiArac"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    required
+                    class="mt-1 shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                    placeholder="0.00"
+                  />
+                  <p class="mt-1 text-xs text-gray-500">Kendi Aracı ile Gelecek müşteri</p>
+                </div>
               </div>
-              <div class="sm:col-span-3">
-                <label for="tourMaliyet" class="block text-sm font-medium text-gray-700">
-                  Kişi Başı Maliyet (₺) <span class="text-red-500">*</span>
-                </label>
-                <input
-                  id="tourMaliyet"
-                  v-model.number="tourForm.maliyet"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  required
-                  class="mt-1 shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md"
-                  placeholder="0.00"
-                />
-              </div>
-              <div class="sm:col-span-3 flex items-center gap-2">
+              <div class="mt-4 flex items-center gap-2">
                 <button
                   type="submit"
                   :disabled="tourLoading"
@@ -68,7 +87,7 @@
                   İptal
                 </button>
               </div>
-              <p v-if="tourError" class="sm:col-span-12 text-sm text-red-600">{{ tourError }}</p>
+              <p v-if="tourError" class="mt-2 text-sm text-red-600">{{ tourError }}</p>
             </form>
 
             <!-- Tur Listesi -->
@@ -86,7 +105,10 @@
                     </span>
                   </div>
                   <div class="flex items-center gap-4">
-                    <span class="text-sm text-gray-700">{{ formatCurrency(Number(tour.maliyet)) }} / kişi</span>
+                    <span class="text-sm text-gray-700 text-right">
+                      <span class="block">Servis: {{ formatCurrency(Number(tour.maliyetServis)) }}</span>
+                      <span class="block text-gray-500">Kendi aracı: {{ formatCurrency(Number(tour.maliyetKendiArac)) }}</span>
+                    </span>
                     <button
                       @click="editTour(tour)"
                       class="text-blue-600 hover:text-blue-800 text-sm font-medium">
@@ -353,7 +375,8 @@ const tourError = ref('')
 const tourForm = ref({
   id: null,
   ad: '',
-  maliyet: 0,
+  maliyetServis: 0,
+  maliyetKendiArac: 0,
   aktif: true
 })
 
@@ -374,7 +397,7 @@ const loadTours = async () => {
 }
 
 const resetTourForm = () => {
-  tourForm.value = { id: null, ad: '', maliyet: 0, aktif: true }
+  tourForm.value = { id: null, ad: '', maliyetServis: 0, maliyetKendiArac: 0, aktif: true }
   tourError.value = ''
 }
 
@@ -382,7 +405,8 @@ const editTour = (tour) => {
   tourForm.value = {
     id: tour.id,
     ad: tour.ad,
-    maliyet: Number(tour.maliyet),
+    maliyetServis: Number(tour.maliyetServis),
+    maliyetKendiArac: Number(tour.maliyetKendiArac),
     aktif: tour.aktif
   }
   tourError.value = ''
@@ -395,8 +419,12 @@ const saveTour = async () => {
     tourError.value = 'Tur adı en az 2 karakter olmalıdır'
     return
   }
-  if (tourForm.value.maliyet === null || tourForm.value.maliyet < 0) {
-    tourError.value = 'Maliyet 0 veya daha büyük olmalıdır'
+  if (tourForm.value.maliyetServis === null || tourForm.value.maliyetServis < 0) {
+    tourError.value = 'Servis maliyeti 0 veya daha büyük olmalıdır'
+    return
+  }
+  if (tourForm.value.maliyetKendiArac === null || tourForm.value.maliyetKendiArac < 0) {
+    tourError.value = 'Kendi aracı maliyeti 0 veya daha büyük olmalıdır'
     return
   }
 
@@ -404,7 +432,8 @@ const saveTour = async () => {
   try {
     const payload = {
       ad: tourForm.value.ad.trim(),
-      maliyet: tourForm.value.maliyet,
+      maliyetServis: tourForm.value.maliyetServis,
+      maliyetKendiArac: tourForm.value.maliyetKendiArac,
       aktif: tourForm.value.aktif
     }
 

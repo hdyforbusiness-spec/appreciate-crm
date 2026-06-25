@@ -35,12 +35,13 @@ model Booking {
 }
 
 model Tour {
-  id        String   @id @default(cuid())
-  ad        String   @unique // Tur adı
-  maliyet   Decimal  @default(0) // Kişi başı maliyet (çocuk yarı fiyat)
-  aktif     Boolean  @default(true) // Pasif turlar rezervasyon formunda görünmez
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id               String   @id @default(cuid())
+  ad               String   @unique // Tur adı
+  maliyetServis    Decimal  @default(0) // "Servis Kullanacak" müşteri maliyeti (kişi başı, çocuk yarı fiyat)
+  maliyetKendiArac Decimal  @default(0) // "Kendi Aracı ile Gelecek" müşteri maliyeti (kişi başı, çocuk yarı fiyat)
+  aktif            Boolean  @default(true) // Pasif turlar rezervasyon formunda görünmez
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
   @@map("tours")
 }

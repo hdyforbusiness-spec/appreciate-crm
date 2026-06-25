@@ -47,10 +47,13 @@ export default defineEventHandler(async (event) => {
       parseInt(body.cocukSayisi) || 0
     )
 
-    // Tur maliyetini snapshot'la. Tur bulunamazsa mevcut snapshot korunur.
+    // Tur maliyetini snapshot'la. Bilet tipine göre maliyet değişir.
+    // Tur bulunamazsa mevcut snapshot korunur.
     const turAdi = (body.turAdi || '').trim()
     const tour = await prisma.tour.findFirst({ where: { ad: turAdi } })
-    const birimMaliyet = tour ? Number(tour.maliyet) : Number(existingBooking.birimMaliyet)
+    const birimMaliyet = tour
+      ? Number(body.biletTipi === 'Kendi Aracı ile Gelecek' ? tour.maliyetKendiArac : tour.maliyetServis)
+      : Number(existingBooking.birimMaliyet)
     const toplamMaliyet = calculateCost(
       parseInt(body.kacKisi),
       birimMaliyet,

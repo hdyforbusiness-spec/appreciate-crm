@@ -35,10 +35,14 @@ export default defineEventHandler(async (event) => {
     // Toplam tutarı hesapla
     const toplamTutar = calculateTotal(body.kacKisi, body.turFiyati, body.cocukSayisi || 0)
 
-    // Tur maliyetini snapshot'la (kâr hesabı için). Tur bulunamazsa 0.
+    // Tur maliyetini snapshot'la (kâr hesabı için). Bilet tipine göre maliyet değişir.
+    // Tur bulunamazsa 0.
     const turAdi = body.turAdi.trim()
+    const biletTipi = body.biletTipi || 'Servis Kullanacak'
     const tour = await prisma.tour.findFirst({ where: { ad: turAdi } })
-    const birimMaliyet = tour ? Number(tour.maliyet) : 0
+    const birimMaliyet = tour
+      ? Number(biletTipi === 'Kendi Aracı ile Gelecek' ? tour.maliyetKendiArac : tour.maliyetServis)
+      : 0
     const toplamMaliyet = calculateCost(body.kacKisi, birimMaliyet, body.cocukSayisi || 0)
 
     const booking = await prisma.booking.create({
@@ -55,9 +59,9 @@ export default defineEventHandler(async (event) => {
         birimMaliyet,
         toplamMaliyet,
         not: body.not?.trim() || null,
-        biletTipi: body.biletTipi || 'Servis Kullanacak',
-        alinisYeri: body.biletTipi === 'Servis Kullanacak' ? body.alinisYeri?.trim() || null : null,
-        alinisSaati: body.biletTipi === 'Servis Kullanacak' ? body.alinisSaati?.trim() || null : null
+        biletTipi,
+        alinisYeri: biletTipi === 'Servis Kullanacak' ? body.alinisYeri?.trim() || null : null,
+        alinisSaati: biletTipi === 'Servis Kullanacak' ? body.alinisSaati?.trim() || null : null
       }
     })
 

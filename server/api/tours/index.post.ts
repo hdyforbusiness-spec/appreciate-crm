@@ -11,9 +11,14 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, message: 'Tur adı en az 2 karakter olmalıdır' })
   }
 
-  const maliyet = parseFloat(body.maliyet)
-  if (isNaN(maliyet) || maliyet < 0) {
-    throw createError({ statusCode: 400, message: 'Maliyet 0 veya daha büyük olmalıdır' })
+  const maliyetServis = parseFloat(body.maliyetServis)
+  if (isNaN(maliyetServis) || maliyetServis < 0) {
+    throw createError({ statusCode: 400, message: 'Servis maliyeti 0 veya daha büyük olmalıdır' })
+  }
+
+  const maliyetKendiArac = parseFloat(body.maliyetKendiArac)
+  if (isNaN(maliyetKendiArac) || maliyetKendiArac < 0) {
+    throw createError({ statusCode: 400, message: 'Kendi aracı maliyeti 0 veya daha büyük olmalıdır' })
   }
 
   try {
@@ -25,7 +30,8 @@ export default defineEventHandler(async (event) => {
     const tour = await prisma.tour.create({
       data: {
         ad,
-        maliyet,
+        maliyetServis,
+        maliyetKendiArac,
         aktif: body.aktif !== false
       }
     })
