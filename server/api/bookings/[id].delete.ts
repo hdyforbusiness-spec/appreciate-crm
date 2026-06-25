@@ -10,7 +10,7 @@ export default defineEventHandler(async (event) => {
   if (!id) {
     throw createError({
       statusCode: 400,
-      statusMessage: 'Rezervasyon ID gereklidir'
+      message: 'Rezervasyon ID gereklidir'
     })
   }
 
@@ -23,7 +23,7 @@ export default defineEventHandler(async (event) => {
     if (!existingBooking) {
       throw createError({
         statusCode: 404,
-        statusMessage: 'Rezervasyon bulunamadı'
+        message: 'Rezervasyon bulunamadı'
       })
     }
 
@@ -40,7 +40,7 @@ export default defineEventHandler(async (event) => {
     console.error('Rezervasyon silme hatası:', error)
     throw createError({
       statusCode: 500,
-      statusMessage: 'Rezervasyon silinemedi'
+      message: 'Rezervasyon silinemedi'
     })
   }
 })

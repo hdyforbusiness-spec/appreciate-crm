@@ -14,7 +14,7 @@ export default defineEventHandler(async (event) => {
   if (errors.length > 0) {
     throw createError({
       statusCode: 400,
-      statusMessage: 'Validasyon hatası',
+      message: 'Validasyon hatası',
       data: errors
     })
   }
@@ -62,7 +62,7 @@ export default defineEventHandler(async (event) => {
     console.error('Rezervasyon oluşturma hatası:', error)
     throw createError({
       statusCode: 500,
-      statusMessage: 'Rezervasyon oluşturulamadı'
+      message: 'Rezervasyon oluşturulamadı'
     })
   }
 })

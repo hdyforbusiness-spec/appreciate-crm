@@ -13,7 +13,7 @@ export default defineEventHandler(async (event) => {
     if (!bookingId) {
       throw createError({
         statusCode: 400,
-        statusMessage: 'Rezervasyon ID gereklidir'
+        message: 'Rezervasyon ID gereklidir'
       })
     }
 
@@ -25,7 +25,7 @@ export default defineEventHandler(async (event) => {
     if (!booking) {
       throw createError({
         statusCode: 404,
-        statusMessage: 'Rezervasyon bulunamadı'
+        message: 'Rezervasyon bulunamadı'
       })
     }
 
@@ -63,13 +63,13 @@ export default defineEventHandler(async (event) => {
     if (error instanceof Error) {
       throw createError({
         statusCode: 500,
-        statusMessage: `Bilet oluşturulamadı: ${error.message}`
+        message: `Bilet oluşturulamadı: ${error.message}`
       })
     }
     
     throw createError({
       statusCode: 500,
-      statusMessage: 'Bilet oluşturulamadı'
+      message: 'Bilet oluşturulamadı'
     })
   }
 })

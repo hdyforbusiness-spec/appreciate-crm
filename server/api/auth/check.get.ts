@@ -7,7 +7,7 @@ export default defineEventHandler(async (event) => {
   } catch (error) {
     throw createError({
       statusCode: 401,
-      statusMessage: 'Not authenticated'
+      message: 'Not authenticated'
     })
   }
 })

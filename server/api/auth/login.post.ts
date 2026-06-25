@@ -5,7 +5,7 @@ export default defineEventHandler(async (event) => {
   if (!password) {
     throw createError({
       statusCode: 400,
-      statusMessage: 'Parola gereklidir'
+      message: 'Parola gereklidir'
     })
   }
 
@@ -15,7 +15,7 @@ export default defineEventHandler(async (event) => {
   if (password !== adminPassword) {
     throw createError({
       statusCode: 401,
-      statusMessage: 'Yanlış parola'
+      message: 'Yanlış parola'
     })
   }
 

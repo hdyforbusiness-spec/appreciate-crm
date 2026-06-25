@@ -352,8 +352,10 @@ const errors = ref({})
 
 // Computed
 const minDate = computed(() => {
-  const today = new Date()
-  return today.toISOString().split('T')[0]
+  // Allow past dates for creating reservations
+  const pastDate = new Date()
+  pastDate.setFullYear(pastDate.getFullYear() - 1) // Allow dates up to 1 year ago
+  return pastDate.toISOString().split('T')[0]
 })
 
 const toplamTutar = computed(() => {
@@ -396,13 +398,13 @@ const validateForm = () => {
   if (!form.value.turTarihi) {
     errors.value.turTarihi = 'Tur tarihi seçilmelidir'
   } else {
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
+    // Allow past dates for creating reservations
     const turDate = new Date(form.value.turTarihi)
-    turDate.setHours(0, 0, 0, 0)
+    const oneYearAgo = new Date()
+    oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1)
     
-    if (turDate < today) {
-      errors.value.turTarihi = 'Tur tarihi bugünden önce olamaz'
+    if (turDate < oneYearAgo) {
+      errors.value.turTarihi = 'Tur tarihi 1 yıldan daha eski olamaz'
     }
   }
   

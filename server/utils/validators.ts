@@ -37,13 +37,13 @@ export function validateBooking(data: Partial<CreateBookingData>): ValidationErr
   if (!data.turTarihi) {
     errors.push({ field: 'turTarihi', message: 'Tur tarihi seçilmelidir' })
   } else {
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
+    // Allow past dates for creating reservations
     const turDate = new Date(data.turTarihi)
-    turDate.setHours(0, 0, 0, 0)
+    const oneYearAgo = new Date()
+    oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1)
     
-    if (turDate < today) {
-      errors.push({ field: 'turTarihi', message: 'Tur tarihi bugünden önce olamaz' })
+    if (turDate < oneYearAgo) {
+      errors.push({ field: 'turTarihi', message: 'Tur tarihi 1 yıldan daha eski olamaz' })
     }
   }
 

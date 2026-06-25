@@ -69,7 +69,7 @@ export default defineEventHandler(async (event) => {
     console.error('Rezervasyon listesi hatası:', error)
     throw createError({
       statusCode: 500,
-      statusMessage: 'Rezervasyonlar alınamadı'
+      message: 'Rezervasyonlar alınamadı'
     })
   }
 })

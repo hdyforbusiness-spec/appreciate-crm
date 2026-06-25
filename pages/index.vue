@@ -28,11 +28,18 @@
             </svg>
             Rezervasyonları Görüntüle
           </NuxtLink>
+          <NuxtLink to="/gunluk-rapor"
+            class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+            <svg class="-ml-1 mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+            </svg>
+            Günlük Rapor
+          </NuxtLink>
         </div>
       </div>
 
       <!-- Stats Cards -->
-      <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 mb-8">
+      <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4 mb-8">
         <!-- Toplam Rezervasyon -->
         <div class="bg-white overflow-hidden shadow rounded-lg">
           <div class="p-5">
@@ -120,33 +127,184 @@
             </div>
           </div>
         </div>
+
+        <!-- Toplam Kişi Sayısı -->
+        <div class="bg-white overflow-hidden shadow rounded-lg">
+          <div class="p-5">
+            <div class="flex items-center">
+              <div class="flex-shrink-0">
+                <svg class="h-6 w-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+              </div>
+              <div class="ml-5 w-0 flex-1">
+                <dl>
+                  <dt class="text-sm font-medium text-gray-500 truncate">
+                    Toplam Kişi Sayısı
+                  </dt>
+                  <dd class="text-lg font-medium text-gray-900">
+                    {{ loading ? '...' : stats.totalPersonCount }}
+                  </dd>
+                </dl>
+              </div>
+            </div>
+          </div>
+          <div class="bg-gray-50 px-5 py-3">
+            <div class="text-sm">
+              <span class="text-gray-600">Bu ay:</span>
+              <span class="font-medium text-blue-600 ml-1">{{ stats.monthPersonCount }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Toplam Çocuk Sayısı -->
+        <div class="bg-white overflow-hidden shadow rounded-lg">
+          <div class="p-5">
+            <div class="flex items-center">
+              <div class="flex-shrink-0">
+                <svg class="h-6 w-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
+                </svg>
+              </div>
+              <div class="ml-5 w-0 flex-1">
+                <dl>
+                  <dt class="text-sm font-medium text-gray-500 truncate">
+                    Toplam Çocuk Sayısı
+                  </dt>
+                  <dd class="text-lg font-medium text-gray-900">
+                    {{ loading ? '...' : stats.totalChildCount }}
+                  </dd>
+                </dl>
+              </div>
+            </div>
+          </div>
+          <div class="bg-gray-50 px-5 py-3">
+            <div class="text-sm">
+              <span class="text-gray-600">Bu ay:</span>
+              <span class="font-medium text-purple-600 ml-1">{{ stats.monthChildCount }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Toplam Maliyet -->
+        <div class="bg-white overflow-hidden shadow rounded-lg">
+          <div class="p-5">
+            <div class="flex items-center">
+              <div class="flex-shrink-0">
+                <svg class="h-6 w-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                </svg>
+              </div>
+              <div class="ml-5 w-0 flex-1">
+                <dl>
+                  <dt class="text-sm font-medium text-gray-500 truncate">
+                    Toplam Maliyet
+                  </dt>
+                  <dd class="text-lg font-medium text-gray-900">
+                    {{ loading ? '...' : formatCurrency(stats.totalCost) }}
+                  </dd>
+                </dl>
+              </div>
+            </div>
+          </div>
+          <div class="bg-gray-50 px-5 py-3">
+            <div class="text-sm">
+              <span class="text-gray-600">Bu ay:</span>
+              <span class="font-medium text-orange-600 ml-1">{{ formatCurrency(stats.monthCost) }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Toplam Kar -->
+        <div class="bg-white overflow-hidden shadow rounded-lg">
+          <div class="p-5">
+            <div class="flex items-center">
+              <div class="flex-shrink-0">
+                <svg class="h-6 w-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                </svg>
+              </div>
+              <div class="ml-5 w-0 flex-1">
+                <dl>
+                  <dt class="text-sm font-medium text-gray-500 truncate">
+                    Toplam Kar
+                  </dt>
+                  <dd class="text-lg font-medium" :class="stats.totalProfit >= 0 ? 'text-green-600' : 'text-red-600'">
+                    {{ loading ? '...' : formatCurrency(stats.totalProfit) }}
+                  </dd>
+                </dl>
+              </div>
+            </div>
+          </div>
+          <div class="bg-gray-50 px-5 py-3">
+            <div class="text-sm">
+              <span class="text-gray-600">Bu ay:</span>
+              <span class="font-medium ml-1" :class="stats.monthProfit >= 0 ? 'text-green-600' : 'text-red-600'">
+                {{ formatCurrency(stats.monthProfit) }}
+              </span>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <!-- Quick Search -->
-      <div class="bg-white shadow rounded-lg mb-8">
-        <div class="px-4 py-5 sm:p-6">
-          <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">
-            Hızlı Arama
-          </h3>
-          <div class="flex flex-col sm:flex-row gap-4">
-            <div class="flex-1">
-              <input
-                v-model="searchQuery"
-                type="text"
-                placeholder="Rezervasyon ID, ad soyad veya telefon numarası ile arama yapın..."
-                class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                @keyup.enter="performSearch"
-              />
+      <!-- Quick Actions -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <!-- Quick Search -->
+        <div class="bg-white shadow rounded-lg">
+          <div class="px-4 py-5 sm:p-6">
+            <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">
+              Hızlı Arama
+            </h3>
+            <div class="flex flex-col sm:flex-row gap-4">
+              <div class="flex-1">
+                <input
+                  v-model="searchQuery"
+                  type="text"
+                  placeholder="Rezervasyon ID, ad soyad veya telefon numarası ile arama yapın..."
+                  class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  @keyup.enter="performSearch"
+                />
+              </div>
+              <button
+                @click="performSearch"
+                :disabled="!searchQuery.trim()"
+                class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed">
+                <svg class="-ml-1 mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                Ara
+              </button>
             </div>
-            <button
-              @click="performSearch"
-              :disabled="!searchQuery.trim()"
-              class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed">
-              <svg class="-ml-1 mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-              Ara
-            </button>
+          </div>
+        </div>
+
+        <!-- Quick Date Filter -->
+        <div class="bg-white shadow rounded-lg">
+          <div class="px-4 py-5 sm:p-6">
+            <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">
+              Hızlı Tarih Filtresi
+            </h3>
+            <div class="flex flex-col sm:flex-row gap-4">
+              <div class="flex-1">
+                <input
+                  v-model="quickDateFilter"
+                  type="date"
+                  class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                />
+              </div>
+              <button
+                @click="viewDailyReport"
+                :disabled="!quickDateFilter"
+                class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed">
+                <svg class="-ml-1 mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+                Günlük Rapor
+              </button>
+            </div>
+            <p class="mt-2 text-sm text-gray-500">
+              Belirli bir günün detaylı raporunu görüntülemek için tarih seçin.
+            </p>
           </div>
         </div>
       </div>
@@ -233,6 +391,7 @@ definePageMeta({
 // Reactive data
 const loading = ref(true)
 const searchQuery = ref('')
+const quickDateFilter = ref('')
 
 const stats = ref({
   totalBookings: 0,
@@ -240,7 +399,15 @@ const stats = ref({
   thisMonth: 0,
   lastMonth: 0,
   totalRevenue: 0,
-  monthlyRevenue: 0
+  monthlyRevenue: 0,
+  totalPersonCount: 0,
+  totalChildCount: 0,
+  monthPersonCount: 0,
+  monthChildCount: 0,
+  totalCost: 0,
+  monthCost: 0,
+  totalProfit: 0,
+  monthProfit: 0
 })
 
 const recentBookings = ref([])
@@ -301,13 +468,35 @@ const loadDashboardData = async () => {
       const totalRevenue = recentBookings.value.reduce((sum, booking) => sum + (booking.toplamTutar || 0), 0)
       const monthlyRevenue = thisMonthBookings.reduce((sum, booking) => sum + (booking.toplamTutar || 0), 0)
       
+      const totalPersonCount = recentBookings.value.reduce((sum, booking) => sum + (booking.kacKisi || 0), 0)
+      const monthPersonCount = thisMonthBookings.reduce((sum, booking) => sum + (booking.kacKisi || 0), 0)
+      
+      const totalChildCount = recentBookings.value.reduce((sum, booking) => sum + (booking.cocukSayisi || 0), 0)
+      const monthChildCount = thisMonthBookings.reduce((sum, booking) => sum + (booking.cocukSayisi || 0), 0)
+      
+      // Calculate costs (1200 TL per adult, 600 TL per child)
+      const totalCost = totalPersonCount * 1200 + totalChildCount * 600
+      const monthCost = monthPersonCount * 1200 + monthChildCount * 600
+      
+      // Calculate profit (Revenue - Cost)
+      const totalProfit = totalRevenue - totalCost
+      const monthProfit = monthlyRevenue - monthCost
+      
       stats.value = {
         totalBookings,
         activeBookings: totalBookings,
         thisMonth: thisMonthBookings.length,
         lastMonth: 0, // We'll calculate this properly when we have more data
         totalRevenue,
-        monthlyRevenue
+        monthlyRevenue,
+        totalPersonCount,
+        totalChildCount,
+        monthPersonCount,
+        monthChildCount,
+        totalCost,
+        monthCost,
+        totalProfit,
+        monthProfit
       }
     }
   } catch (error) {
@@ -319,7 +508,15 @@ const loadDashboardData = async () => {
       thisMonth: 0,
       lastMonth: 0,
       totalRevenue: 0,
-      monthlyRevenue: 0
+      monthlyRevenue: 0,
+      totalPersonCount: 0,
+      totalChildCount: 0,
+      monthPersonCount: 0,
+      monthChildCount: 0,
+      totalCost: 0,
+      monthCost: 0,
+      totalProfit: 0,
+      monthProfit: 0
     }
     recentBookings.value = []
   } finally {
@@ -333,6 +530,18 @@ const performSearch = () => {
   navigateTo({
     path: '/rezervasyonlar',
     query: { search: searchQuery.value }
+  })
+}
+
+const viewDailyReport = () => {
+  if (!quickDateFilter.value) return
+  
+  navigateTo({
+    path: '/gunluk-rapor',
+    query: { 
+      startDate: quickDateFilter.value,
+      endDate: quickDateFilter.value
+    }
   })
 }
 
