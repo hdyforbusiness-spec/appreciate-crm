@@ -118,28 +118,17 @@ function generateTicketSVG(ticketData: any): string {
   <text x="64" y="${ticketData.cocukSayisi > 0 ? 660 : 640}" fill="#1f2937" font-family="Arial, sans-serif" font-size="31" font-weight="700">BİLET TİPİ</text>
   <text x="64" y="${ticketData.cocukSayisi > 0 ? 690 : 670}" fill="#6b7280" font-family="Arial, sans-serif" font-size="28">Tip: ${ticketData.biletTipi}</text>
   
-  <!-- Contact Info based on ticket type -->
-  ${ticketData.biletTipi === 'Kendi Aracı ile Gelecek' ? `
-  <text x="64" y="${ticketData.cocukSayisi > 0 ? 740 : 720}" fill="#1f2937" font-family="Arial, sans-serif" font-size="31" font-weight="700">İLETİŞİM BİLGİLERİ</text>
-  <text x="64" y="${ticketData.cocukSayisi > 0 ? 770 : 750}" fill="#6b7280" font-family="Arial, sans-serif" font-size="28">İletişim Numarası: +90 555 081 9869</text>
-  ` : ''}
-  
-  ${ticketData.biletTipi === 'Servis Kullanacak' ? `
-  <text x="64" y="${ticketData.cocukSayisi > 0 ? 740 : 720}" fill="#1f2937" font-family="Arial, sans-serif" font-size="31" font-weight="700">İLETİŞİM BİLGİLERİ</text>
-  <text x="64" y="${ticketData.cocukSayisi > 0 ? 770 : 750}" fill="#6b7280" font-family="Arial, sans-serif" font-size="28">İletişim Numarası: +90 507 881 7824</text>
-  ` : ''}
-  
   <!-- Pickup Info (conditional) -->
   ${ticketData.biletTipi === 'Servis Kullanacak' && (ticketData.alinisYeri || ticketData.alinisSaati) ? `
-  <text x="64" y="${ticketData.cocukSayisi > 0 ? 820 : 800}" fill="#1f2937" font-family="Arial, sans-serif" font-size="31" font-weight="700">ALIŞ BİLGİLERİ</text>
-  ${ticketData.alinisYeri ? `<text x="64" y="${ticketData.cocukSayisi > 0 ? 850 : 830}" fill="#6b7280" font-family="Arial, sans-serif" font-size="28">Alınış Yeri: ${ticketData.alinisYeri}</text>` : ''}
-  ${ticketData.alinisSaati ? `<text x="64" y="${ticketData.cocukSayisi > 0 ? 880 : 860}" fill="#6b7280" font-family="Arial, sans-serif" font-size="28">Alınış Saati: ${ticketData.alinisSaati}</text>` : ''}
+  <text x="64" y="${ticketData.cocukSayisi > 0 ? 740 : 720}" fill="#1f2937" font-family="Arial, sans-serif" font-size="31" font-weight="700">ALIŞ BİLGİLERİ</text>
+  ${ticketData.alinisYeri ? `<text x="64" y="${ticketData.cocukSayisi > 0 ? 770 : 750}" fill="#6b7280" font-family="Arial, sans-serif" font-size="28">Alınış Yeri: ${ticketData.alinisYeri}</text>` : ''}
+  ${ticketData.alinisSaati ? `<text x="64" y="${ticketData.cocukSayisi > 0 ? 800 : 780}" fill="#6b7280" font-family="Arial, sans-serif" font-size="28">Alınış Saati: ${ticketData.alinisSaati}</text>` : ''}
   ` : ''}
-  
+
   <!-- Notes (conditional) -->
   ${ticketData.not ? `
-  <text x="64" y="${ticketData.cocukSayisi > 0 ? 940 : 920}" fill="#1f2937" font-family="Arial, sans-serif" font-size="31" font-weight="700">NOTLAR</text>
-  <text x="64" y="${ticketData.cocukSayisi > 0 ? 970 : 950}" fill="#6b7280" font-family="Arial, sans-serif" font-size="28">${ticketData.not}</text>
+  <text x="64" y="${ticketData.cocukSayisi > 0 ? 860 : 840}" fill="#1f2937" font-family="Arial, sans-serif" font-size="31" font-weight="700">NOTLAR</text>
+  <text x="64" y="${ticketData.cocukSayisi > 0 ? 890 : 870}" fill="#6b7280" font-family="Arial, sans-serif" font-size="28">${ticketData.not}</text>
   ` : ''}
   
   <!-- TURSAB Info above footer -->
