@@ -55,15 +55,22 @@
                 class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
             </div>
           </div>
-          <div class="mt-4 flex justify-between">
+          <div class="mt-4 flex justify-between items-start">
             <button @click="clearFilters"
               class="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
               Filtreleri Temizle
             </button>
-            <button @click="exportCSV"
-              class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
-              CSV Dışa Aktar
-            </button>
+            <div class="text-right">
+              <button @click="exportCSV" :disabled="exportLoading"
+                class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed">
+                <svg v-if="exportLoading" class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                {{ exportLoading ? 'Hazırlanıyor...' : 'CSV Dışa Aktar' }}
+              </button>
+              <p v-if="exportError" class="mt-2 text-sm text-red-600">{{ exportError }}</p>
+            </div>
           </div>
         </div>
       </div>
@@ -217,6 +224,8 @@ const totalBookings = ref(0)
 const totalPages = ref(0)
 const currentPage = ref(1)
 const turListesi = ref([])
+const exportLoading = ref(false)
+const exportError = ref('')
 
 const filters = ref({
   search: '',
@@ -278,11 +287,36 @@ const clearFilters = () => {
 }
 
 const exportCSV = async () => {
+  exportError.value = ''
+  exportLoading.value = true
+
   try {
-    const query = { ...filters.value, export: 'csv' }
-    window.open(`/api/export/bookings?${new URLSearchParams(query)}`)
+    // Boş filtreleri gönderme; sunucu zaten yok sayıyor ama URL gereksiz şişiyor.
+    const query = Object.fromEntries(
+      Object.entries(filters.value).filter(([, value]) => value)
+    )
+
+    // Blob olarak indir (auth cookie otomatik gönderilir). window.open ile
+    // açılsaydı HTTP hataları exception fırlatmaz, sessizce yeni sekmede kalırdı.
+    const blob = await $fetch('/api/export/bookings', { query, responseType: 'blob' })
+
+    const now = new Date()
+    const pad = (n) => String(n).padStart(2, '0')
+    const stamp = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}_${pad(now.getHours())}-${pad(now.getMinutes())}-${pad(now.getSeconds())}`
+
+    const url = window.URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `rezervasyonlar_${stamp}.csv`
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+    window.URL.revokeObjectURL(url)
   } catch (error) {
     console.error('CSV dışa aktarma hatası:', error)
+    exportError.value = error?.data?.message || 'CSV dışa aktarılamadı'
+  } finally {
+    exportLoading.value = false
   }
 }
 
