@@ -2,22 +2,20 @@ import { getPrisma } from '../../utils/prisma'
 import { requireAuth } from '../../utils/auth'
 
 // Rezervasyon listesini (ekrandaki filtrelerle aynı koşullarda, sayfalama olmadan)
-// CSV olarak indirtir. Hedef tüketici masaüstü Excel olduğu için:
-//  - ayraç  ";"   (ondalık virgülüyle çakışmaması için)
-//  - ondalık ","  (aksi halde Excel tutarları metin olarak okur)
+// CSV olarak indirtir. Standart RFC4180 biçimi kullanılır:
+//  - ayraç  ","   (kullanılan Excel'in liste ayracı virgül)
+//  - ondalık "."  (Windows'ta liste ayracı virgülse ondalık ayracı noktadır;
+//                  virgül yazılırsa tutarlar sayı değil metin olarak okunur)
 //  - UTF-8 BOM    (aksi halde Türkçe karakterler bozulur)
-const DELIMITER = ';'
+//
+// "sep=;" yönergesi DENENDİ VE GERİ ALINDI: Excel o satırı görünce farklı bir
+// ayrıştırma yoluna geçip BOM'u yok sayıyor ve sistem kod sayfasına düşüyor.
+// Sütunlar düzeliyor ama Türkçe karakterler bozuluyor; ikisi birlikte çalışmıyor.
+const DELIMITER = ','
 const NEWLINE = '\r\n'
 // BOM koddan üretiliyor: kaynağa gömülü çıplak U+FEFF editörde ve diff'te
 // görünmez olduğu için yanlışlıkla silinmeye açıktır.
 const BOM = String.fromCharCode(0xFEFF)
-
-// Excel'in liste ayracı bölge ayarına bağlıdır ve ";" olduğu garanti değildir.
-// Ayraç "," olan bir kurulumda dosyanın tamamı tek sütuna düşer, üstelik ondalık
-// virgülü satırı fiyatların ortasından de böler. Bu yönerge ayracı bölge
-// ayarından bağımsız sabitler; Excel satırı gizler, LibreOffice ve Sheets de tanır.
-// BOM'dan sonra, başlık satırından önce gelmelidir.
-const SEP_DIRECTIVE = `sep=${DELIMITER}`
 
 const dateFmt = new Intl.DateTimeFormat('tr-TR', {
   day: '2-digit',
@@ -72,12 +70,12 @@ function csvCell(value: unknown): string {
   return text
 }
 
-/** Prisma Decimal / number değerini "1500,00" biçimine çevirir. */
+/** Prisma Decimal / number değerini "1500.00" biçimine çevirir. */
 function csvMoney(value: unknown): string {
   if (value === null || value === undefined) return ''
   const num = Number(value)
   if (!Number.isFinite(num)) return ''
-  return num.toFixed(2).replace('.', ',')
+  return num.toFixed(2)
 }
 
 const COLUMNS = [
@@ -177,7 +175,7 @@ export default defineEventHandler(async (event) => {
     setHeader(event, 'Content-Disposition', `attachment; filename="${filename}"`)
     setHeader(event, 'Cache-Control', 'no-store')
 
-    return BOM + SEP_DIRECTIVE + NEWLINE + rows.join(NEWLINE) + NEWLINE
+    return BOM + rows.join(NEWLINE) + NEWLINE
   } catch (error) {
     console.error('CSV dışa aktarma hatası:', error)
     throw createError({
