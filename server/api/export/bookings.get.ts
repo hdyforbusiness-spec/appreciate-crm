@@ -2,8 +2,8 @@ import { getPrisma } from '../../utils/prisma'
 import { requireAuth } from '../../utils/auth'
 
 // Rezervasyon listesini (ekrandaki filtrelerle aynı koşullarda, sayfalama olmadan)
-// CSV olarak indirtir. Hedef tüketici Excel tr-TR olduğu için:
-//  - ayraç  ";"   (tr-TR'de liste ayracı virgül değil noktalı virgüldür)
+// CSV olarak indirtir. Hedef tüketici masaüstü Excel olduğu için:
+//  - ayraç  ";"   (ondalık virgülüyle çakışmaması için)
 //  - ondalık ","  (aksi halde Excel tutarları metin olarak okur)
 //  - UTF-8 BOM    (aksi halde Türkçe karakterler bozulur)
 const DELIMITER = ';'
@@ -11,6 +11,13 @@ const NEWLINE = '\r\n'
 // BOM koddan üretiliyor: kaynağa gömülü çıplak U+FEFF editörde ve diff'te
 // görünmez olduğu için yanlışlıkla silinmeye açıktır.
 const BOM = String.fromCharCode(0xFEFF)
+
+// Excel'in liste ayracı bölge ayarına bağlıdır ve ";" olduğu garanti değildir.
+// Ayraç "," olan bir kurulumda dosyanın tamamı tek sütuna düşer, üstelik ondalık
+// virgülü satırı fiyatların ortasından de böler. Bu yönerge ayracı bölge
+// ayarından bağımsız sabitler; Excel satırı gizler, LibreOffice ve Sheets de tanır.
+// BOM'dan sonra, başlık satırından önce gelmelidir.
+const SEP_DIRECTIVE = `sep=${DELIMITER}`
 
 const dateFmt = new Intl.DateTimeFormat('tr-TR', {
   day: '2-digit',
@@ -170,7 +177,7 @@ export default defineEventHandler(async (event) => {
     setHeader(event, 'Content-Disposition', `attachment; filename="${filename}"`)
     setHeader(event, 'Cache-Control', 'no-store')
 
-    return BOM + rows.join(NEWLINE) + NEWLINE
+    return BOM + SEP_DIRECTIVE + NEWLINE + rows.join(NEWLINE) + NEWLINE
   } catch (error) {
     console.error('CSV dışa aktarma hatası:', error)
     throw createError({
