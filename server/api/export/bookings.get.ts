@@ -117,8 +117,9 @@ export default defineEventHandler(async (event) => {
     ]
   }
 
+  // Tam eşleşme; gerekçesi için api/bookings/index.get.ts
   if (turAdi) {
-    where.turAdi = { contains: turAdi as string }
+    where.turAdi = turAdi as string
   }
 
   if (startDate || endDate) {

@@ -30,8 +30,11 @@ export default defineEventHandler(async (event) => {
     ]
   }
 
+  // Tam eşleşme: filtre bir <select> ve değerleri tur listesinden geliyor.
+  // "contains" olsaydı "4 in 1 Combo Tur" seçimi "M 4 in 1 Combo Tur" ve
+  // "L 4 in 1 Combo Tur" kayıtlarını da getirirdi.
   if (turAdi) {
-    where.turAdi = { contains: turAdi as string }
+    where.turAdi = turAdi as string
   }
 
   if (startDate || endDate) {
