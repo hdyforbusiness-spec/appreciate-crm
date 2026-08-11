@@ -48,10 +48,10 @@ export default defineEventHandler(async (event) => {
     }
 
     // Generate SVG
-    const svg = generateTicketSVG(ticketData)
+    const { svg, width, height } = generateTicketSVG(ticketData)
 
     // Return HTML that auto-converts and downloads PNG
-    const html = generateAutoDownloadHTML(svg, ticketData.reservationId)
+    const html = generateAutoDownloadHTML(svg, ticketData.reservationId, width, height)
     
     setHeader(event, 'Content-Type', 'text/html')
     setHeader(event, 'Cache-Control', 'no-store')
@@ -74,12 +74,69 @@ export default defineEventHandler(async (event) => {
   }
 })
 
-function generateTicketSVG(ticketData: any): string {
+// XML özel karakterleri kaçırılmazsa SVG geçersiz hale gelir ve bilet hiç oluşmaz
+function escapeXml(value: any): string {
+  return String(value ?? '').replace(/[&<>"']/g, (char) => {
+    switch (char) {
+      case '&': return '&amp;'
+      case '<': return '&lt;'
+      case '>': return '&gt;'
+      case '"': return '&quot;'
+      default: return '&apos;'
+    }
+  })
+}
+
+// SVG <text> otomatik satır kaydırmaz, satırları elle bölmemiz gerekiyor
+function wrapText(text: string, maxChars: number): string[] {
+  const lines: string[] = []
+
+  // Kullanıcının textarea'da girdiği gerçek satır sonlarına önce saygı göster
+  for (const paragraph of String(text).split(/\r?\n/)) {
+    if (!paragraph.trim()) {
+      lines.push('')
+      continue
+    }
+
+    let line = ''
+    for (const word of paragraph.trim().split(/\s+/)) {
+      if (!line) {
+        line = word
+      } else if ((line + ' ' + word).length <= maxChars) {
+        line += ' ' + word
+      } else {
+        lines.push(line)
+        line = word
+      }
+
+      // Boşluksuz çok uzun tek kelime (ör. uzun bir link) taşmasın
+      while (line.length > maxChars) {
+        lines.push(line.slice(0, maxChars))
+        line = line.slice(maxChars)
+      }
+    }
+
+    if (line) lines.push(line)
+  }
+
+  return lines
+}
+
+function generateTicketSVG(ticketData: any): { svg: string; width: number; height: number } {
   const width = 800
-  const height = 1400 // Increased height to accommodate new fields
-  
-  return `<?xml version="1.0" encoding="UTF-8"?>
-<svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
+
+  // Arial 28px'te ortalama karakter genişliği ~0.5em, kullanılabilir alan 800 - 2*64 = 672px
+  const notLineHeight = 32
+  const notLines = String(ticketData.not ?? '').trim() ? wrapText(ticketData.not, 46) : []
+  const notHeadingY = ticketData.cocukSayisi > 0 ? 860 : 840
+  const notTextY = ticketData.cocukSayisi > 0 ? 890 : 870
+  const notEndY = notLines.length > 0 ? notTextY + (notLines.length - 1) * notLineHeight : notTextY
+
+  // TURSAB satırı height-160'ta; uzun notlar footer'ın üzerine binmesin diye yüksekliği büyüt
+  const height = Math.max(1400, notEndY + 220)
+
+  const svg = `<?xml version="1.0" encoding="UTF-8"?>
+<svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">
   <defs>
     <linearGradient id="headerGradient" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" style="stop-color:${ticketData.biletTipi === 'Kendi Aracı ile Gelecek' ? '#dc2626' : '#2563eb'};stop-opacity:1" />
@@ -94,16 +151,16 @@ function generateTicketSVG(ticketData: any): string {
   <rect x="32" y="32" width="${width-64}" height="160" rx="12" fill="url(#headerGradient)"/>
   <text x="${width/2}" y="80" text-anchor="middle" fill="white" font-family="Arial, sans-serif" font-size="45" font-weight="bold">APPRECIATE TRAVEL</text>
   <text x="${width/2}" y="110" text-anchor="middle" fill="white" font-family="Arial, sans-serif" font-size="34" font-weight="600">TUR BİLETİ</text>
-  <text x="${width/2}" y="140" text-anchor="middle" fill="white" font-family="Arial, sans-serif" font-size="25" font-weight="600">#${ticketData.reservationId}</text>
-  
+  <text x="${width/2}" y="140" text-anchor="middle" fill="white" font-family="Arial, sans-serif" font-size="25" font-weight="600">#${escapeXml(ticketData.reservationId)}</text>
+
   <!-- Customer Info -->
   <text x="64" y="240" fill="#1f2937" font-family="Arial, sans-serif" font-size="31" font-weight="700">MÜŞTERİ BİLGİLERİ</text>
-  <text x="64" y="270" fill="#6b7280" font-family="Arial, sans-serif" font-size="28">Ad Soyad: ${ticketData.adSoyad}</text>
-  <text x="64" y="300" fill="#6b7280" font-family="Arial, sans-serif" font-size="28">Telefon: ${ticketData.telefon}</text>
-  
+  <text x="64" y="270" fill="#6b7280" font-family="Arial, sans-serif" font-size="28">Ad Soyad: ${escapeXml(ticketData.adSoyad)}</text>
+  <text x="64" y="300" fill="#6b7280" font-family="Arial, sans-serif" font-size="28">Telefon: ${escapeXml(ticketData.telefon)}</text>
+
   <!-- Tour Info -->
   <text x="64" y="360" fill="#1f2937" font-family="Arial, sans-serif" font-size="31" font-weight="700">TUR BİLGİLERİ</text>
-  <text x="64" y="390" fill="#6b7280" font-family="Arial, sans-serif" font-size="28">Tur Adı: ${ticketData.turAdi}</text>
+  <text x="64" y="390" fill="#6b7280" font-family="Arial, sans-serif" font-size="28">Tur Adı: ${escapeXml(ticketData.turAdi)}</text>
   <text x="64" y="420" fill="#6b7280" font-family="Arial, sans-serif" font-size="28">Tarih: ${ticketData.turTarihi}</text>
   <text x="64" y="450" fill="#1f2937" font-family="Arial, sans-serif" font-size="28" font-weight="700">Kişi Sayısı: ${ticketData.kacKisi}</text>
   ${ticketData.cocukSayisi > 0 ? `<text x="64" y="480" fill="#1f2937" font-family="Arial, sans-serif" font-size="28" font-weight="700">Çocuk Sayısı: ${ticketData.cocukSayisi}</text>` : ''}
@@ -116,19 +173,19 @@ function generateTicketSVG(ticketData: any): string {
   
   <!-- Ticket Type -->
   <text x="64" y="${ticketData.cocukSayisi > 0 ? 660 : 640}" fill="#1f2937" font-family="Arial, sans-serif" font-size="31" font-weight="700">BİLET TİPİ</text>
-  <text x="64" y="${ticketData.cocukSayisi > 0 ? 690 : 670}" fill="#6b7280" font-family="Arial, sans-serif" font-size="28">Tip: ${ticketData.biletTipi}</text>
+  <text x="64" y="${ticketData.cocukSayisi > 0 ? 690 : 670}" fill="#6b7280" font-family="Arial, sans-serif" font-size="28">Tip: ${escapeXml(ticketData.biletTipi)}</text>
   
   <!-- Pickup Info (conditional) -->
   ${ticketData.biletTipi === 'Servis Kullanacak' && (ticketData.alinisYeri || ticketData.alinisSaati) ? `
   <text x="64" y="${ticketData.cocukSayisi > 0 ? 740 : 720}" fill="#1f2937" font-family="Arial, sans-serif" font-size="31" font-weight="700">ALIŞ BİLGİLERİ</text>
-  ${ticketData.alinisYeri ? `<text x="64" y="${ticketData.cocukSayisi > 0 ? 770 : 750}" fill="#6b7280" font-family="Arial, sans-serif" font-size="28">Alınış Yeri: ${ticketData.alinisYeri}</text>` : ''}
-  ${ticketData.alinisSaati ? `<text x="64" y="${ticketData.cocukSayisi > 0 ? 800 : 780}" fill="#6b7280" font-family="Arial, sans-serif" font-size="28">Alınış Saati: ${ticketData.alinisSaati}</text>` : ''}
+  ${ticketData.alinisYeri ? `<text x="64" y="${ticketData.cocukSayisi > 0 ? 770 : 750}" fill="#6b7280" font-family="Arial, sans-serif" font-size="28">Alınış Yeri: ${escapeXml(ticketData.alinisYeri)}</text>` : ''}
+  ${ticketData.alinisSaati ? `<text x="64" y="${ticketData.cocukSayisi > 0 ? 800 : 780}" fill="#6b7280" font-family="Arial, sans-serif" font-size="28">Alınış Saati: ${escapeXml(ticketData.alinisSaati)}</text>` : ''}
   ` : ''}
 
   <!-- Notes (conditional) -->
-  ${ticketData.not ? `
-  <text x="64" y="${ticketData.cocukSayisi > 0 ? 860 : 840}" fill="#1f2937" font-family="Arial, sans-serif" font-size="31" font-weight="700">NOTLAR</text>
-  <text x="64" y="${ticketData.cocukSayisi > 0 ? 890 : 870}" fill="#6b7280" font-family="Arial, sans-serif" font-size="28">${ticketData.not}</text>
+  ${notLines.length > 0 ? `
+  <text x="64" y="${notHeadingY}" fill="#1f2937" font-family="Arial, sans-serif" font-size="31" font-weight="700">NOTLAR</text>
+  <text x="64" y="${notTextY}" fill="#6b7280" font-family="Arial, sans-serif" font-size="28">${notLines.map((line, index) => `<tspan x="64" dy="${index === 0 ? 0 : notLineHeight}">${escapeXml(line)}</tspan>`).join('')}</text>
   ` : ''}
   
   <!-- TURSAB Info above footer -->
@@ -140,9 +197,11 @@ function generateTicketSVG(ticketData: any): string {
   <text x="${width/2}" y="${height-50}" text-anchor="middle" fill="#6b7280" font-family="Arial, sans-serif" font-size="22">İş Bu Bilet Yabancı Tur Operatörü Bölgesindeki Kontrol İçindir.</text>
   <text x="${width/2}" y="${height-30}" text-anchor="middle" fill="#6b7280" font-family="Arial, sans-serif" font-size="22">Hiçbir Mali Hükmü Yoktur.</text>
 </svg>`
+
+  return { svg, width, height }
 }
 
-function generateAutoDownloadHTML(svg: string, reservationId: string): string {
+function generateAutoDownloadHTML(svg: string, reservationId: string, width: number, height: number): string {
   return `<!DOCTYPE html>
 <html lang="tr">
 <head>
@@ -285,8 +344,8 @@ function generateAutoDownloadHTML(svg: string, reservationId: string): string {
                 
                 // Set high resolution
                 const scale = 2;
-                canvas.width = 800 * scale;
-                canvas.height = 1400 * scale;
+                canvas.width = ${width} * scale;
+                canvas.height = ${height} * scale;
                 
                 // Create image from SVG
                 const img = new Image();
@@ -301,10 +360,10 @@ function generateAutoDownloadHTML(svg: string, reservationId: string): string {
                         
                         // Draw white background
                         ctx.fillStyle = 'white';
-                        ctx.fillRect(0, 0, 800, 1400);
-                        
+                        ctx.fillRect(0, 0, ${width}, ${height});
+
                         // Draw SVG
-                        ctx.drawImage(img, 0, 0, 800, 1400);
+                        ctx.drawImage(img, 0, 0, ${width}, ${height});
                         
                         // Convert to PNG and download
                         canvas.toBlob(function(blob) {
